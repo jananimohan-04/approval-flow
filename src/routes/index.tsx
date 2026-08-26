@@ -17,20 +17,11 @@ export const Route = createFileRoute("/")({
   component: LoginPage,
 });
 
-const DEMO_PASSWORD = "password123";
-const DEMO_ACCOUNTS = [
-  { email: "admin@demo.com", role: "admin", dept: "Administration" },
-  { email: "accounts@demo.com", role: "department_user", dept: "Accounts" },
-  { email: "hr@demo.com", role: "department_user", dept: "HR" },
-  { email: "operations@demo.com", role: "department_user", dept: "Operations" },
-  { email: "management@demo.com", role: "department_user", dept: "Management" },
-];
-
 function LoginPage() {
   const user = useSession();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@demo.com");
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -88,7 +79,7 @@ function LoginPage() {
         <div className="w-full max-w-sm">
           <h1 className="font-display text-2xl font-bold tracking-tight">Sign in</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Use a pre-seeded Demo User to sign in directly to Supabase Auth.
+            Enter your email and password to access your dashboard.
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
@@ -121,25 +112,7 @@ function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 rounded-sm border bg-surface p-3">
-            <p className="text-[10px] uppercase font-bold text-muted-foreground pb-2 text-center tracking-widest border-b mb-2">Supabase Demo Users (password123)</p>
-            <div className="space-y-1">
-              {DEMO_ACCOUNTS.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  onClick={() => {
-                    setEmail(account.email);
-                    setPassword(DEMO_PASSWORD);
-                  }}
-                  className="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
-                >
-                  <span className="font-mono text-xs">{account.email}</span>
-                  <span className="label-mono text-[10px]">{account.dept}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Demo users list removed */}
         </div>
       </section>
     </div>
