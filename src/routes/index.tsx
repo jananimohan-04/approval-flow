@@ -53,25 +53,25 @@ function LoginPage() {
         </div>
         <div className="space-y-6">
           <h2 className="max-w-sm font-display text-4xl font-bold leading-[1.05] tracking-tight">
-            Streamline operational tasks seamlessly.
+            Automate your daily workflows.
           </h2>
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex items-start gap-3">
               <Database className="mt-0.5 size-4 text-primary shrink-0" />
-              Connected Google Drive documents and folders serve as active data sources.
+              Automatically monitor Google Drive spreadsheets for new information.
             </li>
             <li className="flex items-start gap-3">
               <Network className="mt-0.5 size-4 text-primary shrink-0" />
-              Custom rules and contextual LLMs classify incoming payload rows to authorized departments.
+              Let AI instantly route new tasks and data to the right departments.
             </li>
             <li className="flex items-start gap-3">
               <ShieldCheck className="mt-0.5 size-4 text-primary shrink-0" />
-              Row Level Security ensures strict isolation at the postgres database layer.
+              Keep all company data private, secure, and perfectly organized.
             </li>
           </ul>
         </div>
         <p className="label-mono">
-          Powered by Supabase · Auth & PostgreSQL
+          Nexus AI Operations Assistant
         </p>
       </section>
 
