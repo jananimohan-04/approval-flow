@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useDatabase, mutate } from "@/lib/store";
+import { useDatabase, mutate, getDb } from "@/lib/store";
 import type { User } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { dataSourceService } from "@/lib/data/dataSource";
@@ -60,7 +60,7 @@ export function useSession(): User | null {
 }
 
 function getFreshUserByEmail(email: string) {
-  // Utility for pulling directly out of Zustand shadow-state to avoid stale captures
-  const state = require("@/lib/store").getDb();
+  // Utility for pulling directly out of DB state to avoid stale captures
+  const state = getDb();
   return state.users.find((u: any) => u.email === email);
 }
