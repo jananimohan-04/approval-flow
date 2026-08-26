@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { CheckSquare, Search, Plus, Filter, UserRound, Clock, AlertCircle } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { Badge } from "@/components/ui/badge";

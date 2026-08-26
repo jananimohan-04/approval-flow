@@ -3,7 +3,7 @@ import { getSecureServerSupabase } from "./dataQueryService";
 
 // Admin-only Server Function to natively create a Supabase Auth User and bind to app_users
 export const createUserFn = createServerFn({ method: "POST" })
-    .validator((data: { email: string; password?: string; name: string; department_id: string; role: "admin" | "department_user"; }) => data)
+    .validator((data: { email: string; password: string; name: string; department_id: string; role: "admin" | "department_user"; }) => data)
     .handler(async ({ data }) => {
         // Enforce Server Side Role / Auth validation... 
         // Note: For absolute security, you would validate the cookie session here to ensure caller is Admin.

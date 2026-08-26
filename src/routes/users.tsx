@@ -35,11 +35,13 @@ function UsersPage() {
         setLoading(true);
         try {
             const res = await createUserFn({
-                email,
-                name,
-                password,
-                department_id: deptId,
-                role
+                data: {
+                    email,
+                    name,
+                    password,
+                    department_id: deptId,
+                    role
+                }
             });
 
             if (res.success) {
