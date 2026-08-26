@@ -1,4 +1,4 @@
-import type { UserSettings } from "../types";
+import type { UserSettings } from "./notificationService";
 
 /**
  * Voice notification service — browser SpeechSynthesis only (no paid APIs).
@@ -12,7 +12,7 @@ export interface VoiceProvider {
   cancel(): void;
 }
 
-const LANG_TAGS: Record<UserSettings["voice_language"], string> = {
+const LANG_TAGS: Record<string, string> = {
   en: "en-IN",
   ta: "ta-IN",
 };
@@ -34,16 +34,14 @@ class WebSpeechProvider implements VoiceProvider {
   speak(text: string, language: UserSettings["voice_language"]) {
     if (!this.isAvailable()) return;
     try {
-      const langTag = LANG_TAGS[language];
+      const langTag = LANG_TAGS[language] || "en-IN";
       const utterance = new SpeechSynthesisUtterance(text);
       const voice = this.pickVoice(langTag);
       if (voice) {
         utterance.voice = voice;
         utterance.lang = voice.lang;
       } else {
-        // No voice for the requested language on this device — use the default
-        // voice so the user still hears something, or stay silent if none.
-        utterance.lang = LANG_TAGS.en;
+        utterance.lang = "en-IN";
       }
       utterance.rate = 1;
       window.speechSynthesis.cancel();
@@ -60,10 +58,9 @@ class WebSpeechProvider implements VoiceProvider {
 
 export const voiceService: VoiceProvider = new WebSpeechProvider();
 
-export function hasVoiceFor(language: UserSettings["voice_language"]) {
+export function hasVoiceFor(language: string) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
-  const prefix = LANG_TAGS[language].slice(0, 2).toLowerCase();
-  return window.speechSynthesis
-    .getVoices()
-    .some((v) => v.lang.toLowerCase().startsWith(prefix));
+  const tag = LANG_TAGS[language] || "en-IN";
+  const prefix = tag.slice(0, 2).toLowerCase();
+  return window.speechSynthesis.getVoices().some((v) => v.lang.toLowerCase().startsWith(prefix));
 }

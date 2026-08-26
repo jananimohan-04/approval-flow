@@ -2,51 +2,67 @@ import { dataSourceService } from "../data/dataSource";
 import { getDb, mutate } from "../store";
 import type { User } from "../types";
 import { activityService } from "./activityService";
-
-/**
- * Demo authentication. Replace with a real identity provider before
- * production — never ship shared demo credentials to real users.
- */
-export const DEMO_PASSWORD = "demo1234";
-
-export const DEMO_ACCOUNTS = [
-  { email: "admin@demo.com", label: "Admin User", role: "Admin" },
-  { email: "entry@demo.com", label: "Arun", role: "Data Entry" },
-  { email: "approver@demo.com", label: "Kumar", role: "Approver" },
-];
+import { supabase } from "../supabase";
+import { toast } from "sonner";
 
 export const authService = {
-  signIn(email: string, password: string): { user?: User; error?: string } {
-    const user = dataSourceService
-      .list("users")
-      .find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+  async signIn(email: string, password: string): Promise<{ user?: User; error?: string }> {
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (!user) return { error: "No account found for that email." };
-    if (password !== DEMO_PASSWORD) return { error: "Incorrect password." };
-    if (!user.active) return { error: "This account has been deactivated." };
+    if (authError) {
+      return { error: authError.message };
+    }
 
-    mutate((db) => ({ ...db, session_user_id: user.id }));
-    activityService.log({
-      user_id: user.id,
+    if (!authData.user) {
+      return { error: "Unknown authentication error" };
+    }
+
+    // Refresh database explicitly to load matching user from app_users
+    await dataSourceService.hydrate();
+
+    // Find the mapped app_user
+    const appUser = getDb().users.find(u => u.email === authData.user!.email);
+    if (!appUser) {
+      // Create user record locally if missing from mapping in a soft degradation mode?
+      // For this spec, they must exist in the seed. If they don't and auth passes, we reject application level.
+      await supabase.auth.signOut();
+      return { error: "Authenticated successfully but no application user mapping found." };
+    }
+
+    if (!appUser.active) {
+      await supabase.auth.signOut();
+      return { error: "This account has been deactivated." };
+    }
+
+    mutate((db) => ({ ...db, session_user_id: appUser.id }));
+
+    await activityService.log({
+      user_id: appUser.id,
       action: "auth.login",
       entity_type: "user",
-      entity_id: user.id,
-      description: `${user.name} logged in`,
+      entity_id: appUser.id,
+      description: `${appUser.name} logged in`,
     });
-    return { user };
+
+    return { user: appUser };
   },
 
-  signOut() {
+  async signOut() {
     const user = this.currentUser();
     if (user) {
+      // Fire-and-forget logging for signout to keep it snappy
       activityService.log({
         user_id: user.id,
         action: "auth.logout",
         entity_type: "user",
         entity_id: user.id,
         description: `${user.name} logged out`,
-      });
+      }).catch(console.error);
     }
+    await supabase.auth.signOut();
     mutate((db) => ({ ...db, session_user_id: null }));
   },
 

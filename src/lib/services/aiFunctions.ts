@@ -1,0 +1,234 @@
+import { createServerFn } from "@tanstack/react-start";
+import { QAAnswer, ClassificationResult } from "../types";
+import { getSecureServerSupabase, executeStructuredQuery, StructuredQuery, QueryResult } from "./dataQueryService";
+
+export const classifyRowFn = createServerFn({ method: "POST" })
+    .validator((data: {
+        source: string;
+        sheet: string;
+        columns: string[];
+        row: Record<string, unknown>;
+        departments: string[];
+        rules: { keyword: string; department: string; priority: string }[];
+    }) => data)
+    .handler(async ({ data }) => {
+        try {
+            const apiKey = process.env["OPENAI_API_KEY"];
+            if (!apiKey) {
+                throw new Error("AI provider API key is not configured.");
+            }
+
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    model: process.env["AI_MODEL"] || "gpt-4o-mini",
+                    response_format: { type: "json_object" },
+                    temperature: 0.1,
+                    messages: [
+                        {
+                            role: "system",
+                            content: `You are an AI task classification engine for Nexus AI Operations Assistant.
+Your job is to analyze new spreadsheet rows and determine if they require human attention, and route them to one of the configured departments.
+Return ONLY valid JSON with no markdown formatting.
+Schema:
+{
+  "department": "string" | "unclassified",
+  "is_actionable": boolean,
+  "task_title": "string",
+  "task_description": "string",
+  "priority": "low" | "medium" | "high" | "critical",
+  "confidence": number
+}
+
+Rules for actionability:
+- Routine updates with no obvious next step are NOT actionable.
+- Items explicitly marked 'Pending', 'Action Required', 'Failed', or business flows needing review ARE actionable.`,
+                        },
+                        {
+                            role: "user",
+                            content: `Source File: ${data.source}
+Sheet: ${data.sheet}
+Columns: ${data.columns.join(", ")}
+Row Data:
+${JSON.stringify(data.row, null, 2)}
+
+Available Departments:
+${data.departments.join("\n")}
+
+Admin AI Configuration Rules:
+${data.rules.map((r) => `- Keywords [${r.keyword}] => ${r.department} (Priority: ${r.priority})`).join("\n")}
+
+Return the structured JSON classification. Note: Ensure department matches exactly from available list or is 'unclassified'.`,
+                        },
+                    ],
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("AI Classification failed");
+            }
+
+            const completion = await response.json();
+            const content = completion.choices[0].message.content;
+            return JSON.parse(content) as ClassificationResult;
+        } catch (e: any) {
+            console.error("Server AI Error classification:", e.message);
+            return {
+                department: "unclassified",
+                is_actionable: false,
+                task_title: "AI Analysis Failed",
+                task_description: "Failed to classify via server.",
+                priority: "low",
+                confidence: 0,
+            } as ClassificationResult;
+        }
+    });
+
+
+export const answerQuestionFn = createServerFn({ method: "POST" })
+    .validator((data: {
+        question: string;
+        accessToken: string;
+    }) => data)
+    .handler(async ({ data }) => {
+        try {
+            const apiKey = process.env["OPENAI_API_KEY"];
+            if (!apiKey) throw new Error("AI provider API key is not configured.");
+
+            const supabase = getSecureServerSupabase(data.accessToken);
+
+            // 1. Fetch secure accessible schema maps based on authenticated user RLS
+            const { data: sources } = await supabase.from("data_sources").select("id, file_name, row_count");
+            if (!sources || sources.length === 0) {
+                return { answer: "I couldn't find any connected data sources you have access to.", sources: [] } as QAAnswer;
+            }
+
+            let schemaSummary = "Available Data Sources:\n";
+            for (const src of sources) {
+                schemaSummary += `- [ID: ${src.id}] ${src.file_name} (${src.row_count || 0} total updates)\n`;
+                // Fetch up to 1 row simply to isolate unique header columns explicitly without retrieving full dataset
+                const { data: probe } = await supabase.from("data_source_rows").select("sheet_name, row_data").eq("data_source_id", src.id).limit(10);
+                if (probe && probe.length > 0) {
+                    const sheets = [...new Set(probe.map(p => p.sheet_name))];
+                    for (const s of sheets) {
+                        const sampleRow = probe.find(p => p.sheet_name === s)?.row_data || {};
+                        schemaSummary += `   -> Sheet: "${s}", Columns: [${Object.keys(sampleRow).join(", ")}]\n`;
+                    }
+                }
+            }
+
+            // 2. PASS 1: Understand intent and output Structured Query payload
+            const intentResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                    model: process.env["AI_MODEL"] || "gpt-4o-mini",
+                    response_format: { type: "json_object" },
+                    temperature: 0.0,
+                    messages: [
+                        {
+                            role: "system",
+                            content: `You are an AI database architect converting user questions into specific data queries.
+You are given the user's question and the available Data Source schemas.
+Decide if the answer exists in these schemas. If not, return an empty array for queries.
+You must output a JSON object obeying this exactly:
+
+{
+  "queries": [
+    {
+      "dataSourceId": "string-id of the file",
+      "sheetName": "string name of the sheet",
+      "filters": [
+         { "column": "Exact Column Name", "operator": "eq" | "contains" | "gt" | "lt", "value": "Value exactly matching schema typing" }
+      ],
+      "operation": "count" | "sum" | "avg" | "max" | "min" | "list",
+      "targetColumn": "Target exact column name ONLY if operation is sum/avg/max/min",
+      "limit": 5 (only apply if you need specific list)
+    }
+  ]
+}`
+                        },
+                        {
+                            role: "user",
+                            content: `Available Schema:\n${schemaSummary}\n\nQuestion: "${data.question}"\n\nGenerate the JSON execution plan.`
+                        }
+                    ]
+                })
+            });
+
+            if (!intentResponse.ok) throw new Error("Intent parsing failed.");
+
+            const intentResult = await intentResponse.json();
+            const plan = JSON.parse(intentResult.choices[0].message.content) as { queries: StructuredQuery[] };
+            let aggregatedResults: QueryResult[] = [];
+
+            // 3. SECURE SERVER EVALUATION LOOP OVER ALL ROWS BYPASSING LIMITS
+            if (plan.queries && plan.queries.length > 0) {
+                for (const q of plan.queries) {
+                    const result = await executeStructuredQuery(q, data.accessToken);
+                    aggregatedResults.push(result);
+                }
+            }
+
+            // 4. GENERATE NATURAL LANGUAGE EXPLANATION NO LLM MATH ALLOWED
+            const hasMeaningfulData = aggregatedResults.some(r => r.recordsAnalyzed > 0);
+            let injectionContext = "";
+
+            if (hasMeaningfulData) {
+                injectionContext = "Deterministic Executed Results (TRUST THESE VALUES CITED EXACTLY):\n" +
+                    aggregatedResults.map((r, i) => `Query ${i + 1} [${r.fileName} -> ${r.query.sheetName}]: Requested ${r.query.operation}. System parsed ${r.recordsAnalyzed} entire row(s). Final Result -> ${JSON.stringify(r.result)}`).join("\n\n");
+            } else {
+                injectionContext = "The system found 0 rows or executed 0 queries meaning data doesn't exist.";
+            }
+
+            const exactSources = aggregatedResults.map(r => ({ file: r.fileName || "Unknown", sheet: r.query.sheetName }));
+
+            const finalResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                    model: process.env["AI_MODEL"] || "gpt-4o-mini",
+                    response_format: { type: "json_object" },
+                    temperature: 0.1,
+                    messages: [
+                        {
+                            role: "system",
+                            content: `You are the Nexus AI Assistant. You answer questions definitively based ONLY on the Deterministic Executed Results provided.
+Do NOT attempt to calculate numbers yourself, trust the server's math injected below implicitly.
+If the requested information/field/source genuinely does not exist or cannot be determined (e.g., no queries were executed, or the target column is missing), explicitly output EXACTLY: "I couldn't find that information in the connected data sources."
+CRITICAL: If a count or sum successfully executes but mathematically results in 0, you MUST state the 0 result explicitly (e.g. "There are 0 pending invoices."). Do NOT say you couldn't find it.
+
+Output exactly as JSON:
+{
+  "answer": "...",
+  "sources": [] (Can be left empty if you used no sources)
+}`
+                        },
+                        {
+                            role: "user",
+                            content: `Question: "${data.question}"\n\n${injectionContext}\n\nFormulate the exact JSON response passing strictly the answer string.`
+                        }
+                    ]
+                })
+            });
+
+            const finalResult = await finalResponse.json();
+            const answerObj = JSON.parse(finalResult.choices[0].message.content);
+
+            return {
+                answer: answerObj.answer,
+                sources: exactSources.length > 0 ? exactSources : []
+            } as QAAnswer;
+
+        } catch (e: any) {
+            console.error("Server QA Error:", e.message);
+            return {
+                answer: "AI is temporarily unavailable. Please try again.",
+                sources: []
+            } as QAAnswer;
+        }
+    });

@@ -1,30 +1,37 @@
 import { dataSourceService } from "../data/dataSource";
 import { getDb, mutate, uid } from "../store";
-import type { AppNotification, NotificationType, UserSettings } from "../types";
+import type { AppNotification, NotificationType } from "../types";
 import { activityService } from "./activityService";
 import { realtime } from "./realtime";
+
+export interface UserSettings {
+  voice_enabled: boolean;
+  voice_language: string;
+}
 
 const DEFAULT_SETTINGS: UserSettings = { voice_enabled: true, voice_language: "en" };
 
 export const notificationService = {
-  create(input: {
+  async create(input: {
     user_id: string;
     title: string;
     message: string;
-    notification_type: NotificationType;
-    related_id?: string | null;
-  }): AppNotification {
+    type: string;
+    department_id?: string | null;
+    task_id?: string | null;
+  }): Promise<AppNotification> {
     const notification: AppNotification = {
       id: uid("n"),
       user_id: input.user_id,
+      department_id: input.department_id ?? null,
+      task_id: input.task_id ?? null,
       title: input.title,
       message: input.message,
-      notification_type: input.notification_type,
-      related_id: input.related_id ?? null,
+      type: input.type,
       is_read: false,
       created_at: new Date().toISOString(),
     };
-    dataSourceService.insert("notifications", notification);
+    await dataSourceService.insert("notifications", notification);
     activityService.log({
       user_id: input.user_id,
       action: "notification.created",
@@ -47,12 +54,10 @@ export const notificationService = {
     return this.listFor(userId).filter((n) => !n.is_read).length;
   },
 
-  markRead(id: string) {
-    const notification = dataSourceService
-      .list("notifications")
-      .find((n) => n.id === id);
+  async markRead(id: string) {
+    const notification = dataSourceService.list("notifications").find((n) => n.id === id);
     if (!notification || notification.is_read) return;
-    dataSourceService.update("notifications", id, { is_read: true });
+    await dataSourceService.update("notifications", id, { is_read: true });
     activityService.log({
       user_id: notification.user_id,
       action: "notification.read",
@@ -62,13 +67,11 @@ export const notificationService = {
     });
   },
 
-  markAllRead(userId: string) {
-    mutate((db) => ({
-      ...db,
-      notifications: db.notifications.map((n) =>
-        n.user_id === userId ? { ...n, is_read: true } : n,
-      ),
-    }));
+  async markAllRead(userId: string) {
+    const unread = dataSourceService.list("notifications").filter(n => n.user_id === userId && !n.is_read);
+    const promises = unread.map(n => dataSourceService.update("notifications", n.id, { is_read: true }));
+    await Promise.all(promises);
+
     activityService.log({
       user_id: userId,
       action: "notification.read_all",
@@ -78,14 +81,20 @@ export const notificationService = {
     });
   },
 
-  getSettings(userId: string): UserSettings {
-    return getDb().settings[userId] ?? DEFAULT_SETTINGS;
+  // Settings are not in the Database model explicitly unless we add them
+  // For the MVP, we can just store them in localStorage separately or keep them in the mock store.
+  getSettings(): UserSettings {
+    try {
+      const data = localStorage.getItem("nexus_user_settings");
+      return data ? JSON.parse(data) : DEFAULT_SETTINGS;
+    } catch {
+      return DEFAULT_SETTINGS;
+    }
   },
 
-  saveSettings(userId: string, settings: UserSettings) {
-    mutate((db) => ({
-      ...db,
-      settings: { ...db.settings, [userId]: settings },
-    }));
+  saveSettings(settings: UserSettings) {
+    try {
+      localStorage.setItem("nexus_user_settings", JSON.stringify(settings));
+    } catch { }
   },
 };

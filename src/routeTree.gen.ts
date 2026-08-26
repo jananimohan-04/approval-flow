@@ -10,12 +10,36 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivityLogsRouteImport } from './routes/activity-logs'
+import { Route as AiAssistantRouteImport } from './routes/ai-assistant'
+import { Route as AiRulesRouteImport } from './routes/ai-rules'
 import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as VehiclesRouteImport } from './routes/vehicles'
+import { Route as DataSourcesRouteImport } from './routes/data-sources'
+import { Route as DepartmentsRouteImport } from './routes/departments'
+import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as UsersRouteImport } from './routes/users'
+import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivityLogsRoute = ActivityLogsRouteImport.update({
+  id: '/activity-logs',
+  path: '/activity-logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiAssistantRoute = AiAssistantRouteImport.update({
+  id: '/ai-assistant',
+  path: '/ai-assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiRulesRoute = AiRulesRouteImport.update({
+  id: '/ai-rules',
+  path: '/ai-rules',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -23,40 +47,143 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const VehiclesRoute = VehiclesRouteImport.update({
-  id: '/vehicles',
-  path: '/vehicles',
+const DataSourcesRoute = DataSourcesRouteImport.update({
+  id: '/data-sources',
+  path: '/data-sources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DepartmentsRoute = DepartmentsRouteImport.update({
+  id: '/departments',
+  path: '/departments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksRoute = TasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
+  id: '/auth/google/callback',
+  path: '/auth/google/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activity-logs': typeof ActivityLogsRoute
+  '/ai-assistant': typeof AiAssistantRoute
+  '/ai-rules': typeof AiRulesRoute
   '/dashboard': typeof DashboardRoute
-  '/vehicles': typeof VehiclesRoute
+  '/data-sources': typeof DataSourcesRoute
+  '/departments': typeof DepartmentsRoute
+  '/notifications': typeof NotificationsRoute
+  '/settings': typeof SettingsRoute
+  '/tasks': typeof TasksRoute
+  '/users': typeof UsersRoute
+  '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activity-logs': typeof ActivityLogsRoute
+  '/ai-assistant': typeof AiAssistantRoute
+  '/ai-rules': typeof AiRulesRoute
   '/dashboard': typeof DashboardRoute
-  '/vehicles': typeof VehiclesRoute
+  '/data-sources': typeof DataSourcesRoute
+  '/departments': typeof DepartmentsRoute
+  '/notifications': typeof NotificationsRoute
+  '/settings': typeof SettingsRoute
+  '/tasks': typeof TasksRoute
+  '/users': typeof UsersRoute
+  '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activity-logs': typeof ActivityLogsRoute
+  '/ai-assistant': typeof AiAssistantRoute
+  '/ai-rules': typeof AiRulesRoute
   '/dashboard': typeof DashboardRoute
-  '/vehicles': typeof VehiclesRoute
+  '/data-sources': typeof DataSourcesRoute
+  '/departments': typeof DepartmentsRoute
+  '/notifications': typeof NotificationsRoute
+  '/settings': typeof SettingsRoute
+  '/tasks': typeof TasksRoute
+  '/users': typeof UsersRoute
+  '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/vehicles'
+  fullPaths:
+    | '/'
+    | '/activity-logs'
+    | '/ai-assistant'
+    | '/ai-rules'
+    | '/dashboard'
+    | '/data-sources'
+    | '/departments'
+    | '/notifications'
+    | '/settings'
+    | '/tasks'
+    | '/users'
+    | '/auth/google/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/vehicles'
-  id: '__root__' | '/' | '/dashboard' | '/vehicles'
+  to:
+    | '/'
+    | '/activity-logs'
+    | '/ai-assistant'
+    | '/ai-rules'
+    | '/dashboard'
+    | '/data-sources'
+    | '/departments'
+    | '/notifications'
+    | '/settings'
+    | '/tasks'
+    | '/users'
+    | '/auth/google/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/activity-logs'
+    | '/ai-assistant'
+    | '/ai-rules'
+    | '/dashboard'
+    | '/data-sources'
+    | '/departments'
+    | '/notifications'
+    | '/settings'
+    | '/tasks'
+    | '/users'
+    | '/auth/google/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivityLogsRoute: typeof ActivityLogsRoute
+  AiAssistantRoute: typeof AiAssistantRoute
+  AiRulesRoute: typeof AiRulesRoute
   DashboardRoute: typeof DashboardRoute
-  VehiclesRoute: typeof VehiclesRoute
+  DataSourcesRoute: typeof DataSourcesRoute
+  DepartmentsRoute: typeof DepartmentsRoute
+  NotificationsRoute: typeof NotificationsRoute
+  SettingsRoute: typeof SettingsRoute
+  TasksRoute: typeof TasksRoute
+  UsersRoute: typeof UsersRoute
+  AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,6 +195,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/activity-logs': {
+      id: '/activity-logs'
+      path: '/activity-logs'
+      fullPath: '/activity-logs'
+      preLoaderRoute: typeof ActivityLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-assistant': {
+      id: '/ai-assistant'
+      path: '/ai-assistant'
+      fullPath: '/ai-assistant'
+      preLoaderRoute: typeof AiAssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-rules': {
+      id: '/ai-rules'
+      path: '/ai-rules'
+      fullPath: '/ai-rules'
+      preLoaderRoute: typeof AiRulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -75,11 +223,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/vehicles': {
-      id: '/vehicles'
-      path: '/vehicles'
-      fullPath: '/vehicles'
-      preLoaderRoute: typeof VehiclesRouteImport
+    '/data-sources': {
+      id: '/data-sources'
+      path: '/data-sources'
+      fullPath: '/data-sources'
+      preLoaderRoute: typeof DataSourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/departments': {
+      id: '/departments'
+      path: '/departments'
+      fullPath: '/departments'
+      preLoaderRoute: typeof DepartmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/google/callback': {
+      id: '/auth/google/callback'
+      path: '/auth/google/callback'
+      fullPath: '/auth/google/callback'
+      preLoaderRoute: typeof AuthGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -87,8 +277,17 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivityLogsRoute: ActivityLogsRoute,
+  AiAssistantRoute: AiAssistantRoute,
+  AiRulesRoute: AiRulesRoute,
   DashboardRoute: DashboardRoute,
-  VehiclesRoute: VehiclesRoute,
+  DataSourcesRoute: DataSourcesRoute,
+  DepartmentsRoute: DepartmentsRoute,
+  NotificationsRoute: NotificationsRoute,
+  SettingsRoute: SettingsRoute,
+  TasksRoute: TasksRoute,
+  UsersRoute: UsersRoute,
+  AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

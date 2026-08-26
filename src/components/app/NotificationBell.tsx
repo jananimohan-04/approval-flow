@@ -1,11 +1,7 @@
 import { Bell } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { notificationService } from "@/lib/services/notificationService";
 import { useDatabase } from "@/lib/store";
 import type { User } from "@/lib/types";
@@ -54,14 +50,15 @@ export function NotificationBell({ user }: { user: User }) {
                 {!n.is_read && <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />}
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">{n.message}</p>
-              <p className="label-mono mt-1">
-                {new Date(n.created_at).toLocaleString()}
-              </p>
+              <p className="label-mono mt-1">{new Date(n.created_at).toLocaleString()}</p>
             </button>
           ))}
         </div>
         <div className="border-t px-3 py-2">
-          <Link to="/notifications" className="font-mono text-[10px] uppercase tracking-[0.08em] text-primary hover:underline">
+          <Link
+            to="/notifications"
+            className="font-mono text-[10px] uppercase tracking-[0.08em] text-primary hover:underline"
+          >
             View all
           </Link>
         </div>

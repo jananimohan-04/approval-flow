@@ -1,13 +1,8 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
-  Truck,
-  ClipboardCheck,
-  Bell,
-  Settings,
-  LogOut,
-  Menu,
+  LayoutDashboard, Database, Bot, CheckSquare, Users, Settings,
+  Bell, LogOut, Menu, Network, BookOpen, Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -15,15 +10,28 @@ import { NotificationBell } from "./NotificationBell";
 import { VoiceListener } from "./VoiceListener";
 import { useSession } from "@/hooks/useSession";
 import { authService } from "@/lib/services/authService";
-import { ROLE_LABELS, type UserRole } from "@/lib/types";
+import { type UserRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const NAV: { to: string; label: string; icon: typeof Truck; roles: UserRole[] }[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "data_entry", "approver"] },
-  { to: "/vehicles", label: "Vehicle Entries", icon: Truck, roles: ["admin", "data_entry", "approver"] },
-  { to: "/approvals", label: "Approvals", icon: ClipboardCheck, roles: ["admin", "approver"] },
-  { to: "/notifications", label: "Notifications", icon: Bell, roles: ["admin", "data_entry", "approver"] },
-  { to: "/admin", label: "Administration", icon: Settings, roles: ["admin"] },
+type NavItem = {
+  to: string;
+  label: string;
+  icon: any;
+  roles: UserRole[]
+};
+
+const NAV: NavItem[] = [
+  // Admin & Department User
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "department_user"] },
+  { to: "/data-sources", label: "Data Sources", icon: Database, roles: ["admin"] },
+  { to: "/ai-assistant", label: "AI Assistant", icon: Bot, roles: ["admin", "department_user"] },
+  { to: "/tasks", label: "Tasks", icon: CheckSquare, roles: ["admin", "department_user"] },
+  { to: "/departments", label: "Departments", icon: Network, roles: ["admin"] },
+  { to: "/users", label: "Users", icon: Users, roles: ["admin"] },
+  { to: "/ai-rules", label: "AI Rules / Mapping", icon: BookOpen, roles: ["admin"] },
+  { to: "/notifications", label: "Notifications", icon: Bell, roles: ["admin", "department_user"] },
+  { to: "/activity-logs", label: "Activity Logs", icon: Activity, roles: ["admin"] },
+  { to: "/settings", label: "Settings", icon: Settings, roles: ["admin", "department_user"] }, // Settings covers Profile for Dept user
 ];
 
 function NavList({ role, onNavigate }: { role: UserRole; onNavigate?: () => void }) {
@@ -78,14 +86,21 @@ export function AppShell({
       <VoiceListener user={user} />
       <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar md:flex">
         <div className="border-b px-4 py-4">
-          <p className="font-display text-base font-bold tracking-tight">Vecta Logic</p>
-          <p className="label-mono mt-0.5">Gate Approval Control</p>
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <Bot className="size-5" />
+            </div>
+            <div>
+              <p className="font-display text-base font-bold tracking-tight">Nexus AI</p>
+              <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Operations</p>
+            </div>
+          </div>
         </div>
         <NavList role={user.role} />
         <div className="mt-auto border-t p-3">
-          <p className="text-sm font-medium">{user.name}</p>
-          <p className="label-mono mt-0.5">
-            {ROLE_LABELS[user.role]} · {user.branch}
+          <p className="text-sm font-medium truncate">{user.name}</p>
+          <p className="label-mono mt-0.5 text-xs text-muted-foreground">
+            {user.role === "admin" ? "Admin" : "Dept User"} · {user.department_id ? "Department" : "Unassigned"}
           </p>
           <Button
             variant="outline"
@@ -110,8 +125,8 @@ export function AppShell({
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 bg-sidebar p-0">
-              <SheetTitle className="border-b px-4 py-4 font-display text-base">
-                Vecta Logic
+              <SheetTitle className="border-b px-4 py-4 font-display text-base flex items-center gap-2">
+                <Bot className="size-5" /> Nexus AI
               </SheetTitle>
               <NavList role={user.role} />
               <div className="mt-auto border-t p-3">

@@ -11,16 +11,19 @@ import type { User } from "@/lib/types";
  */
 export function VoiceListener({ user }: { user: User }) {
   useEffect(() => {
-    return realtime.subscribe((event) => {
+    const unsubscribe = realtime.subscribe((event) => {
       if (event.type !== "notification.created") return;
       if (event.notification.user_id !== user.id) return;
 
       toast(event.notification.title, { description: event.notification.message });
 
-      const settings = notificationService.getSettings(user.id);
+      const settings = notificationService.getSettings();
       if (!settings.voice_enabled) return;
       voiceService.speak(event.notification.message, settings.voice_language);
     });
+    return () => {
+      unsubscribe();
+    };
   }, [user.id]);
 
   return null;

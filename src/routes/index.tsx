@@ -1,51 +1,55 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Truck, ShieldCheck, Volume2 } from "lucide-react";
+import { Network, Database, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authService, DEMO_ACCOUNTS, DEMO_PASSWORD } from "@/lib/services/authService";
+import { authService } from "@/lib/services/authService";
 import { useSession } from "@/hooks/useSession";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Sign in — Vecta Logic Vehicle Approval" },
-      {
-        name: "description",
-        content:
-          "Sign in to the Vecta Logic vehicle entry and approval console: gate entries, approver routing, and voice notifications.",
-      },
-      { property: "og:title", content: "Sign in — Vecta Logic Vehicle Approval" },
-      {
-        property: "og:description",
-        content:
-          "Gate vehicle entries, route approvals to the right approver, and hear voice alerts in English or Tamil.",
-      },
+      { title: "Sign in — Nexus AI Operations" },
     ],
   }),
   component: LoginPage,
 });
 
+const DEMO_PASSWORD = "password123";
+const DEMO_ACCOUNTS = [
+  { email: "admin@demo.com", role: "admin", dept: "Administration" },
+  { email: "accounts@demo.com", role: "department_user", dept: "Accounts" },
+  { email: "hr@demo.com", role: "department_user", dept: "HR" },
+  { email: "operations@demo.com", role: "department_user", dept: "Operations" },
+  { email: "management@demo.com", role: "department_user", dept: "Management" },
+];
+
 function LoginPage() {
   const user = useSession();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("entry@demo.com");
+  const [email, setEmail] = useState("admin@demo.com");
   const [password, setPassword] = useState(DEMO_PASSWORD);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (user) navigate({ to: "/dashboard", replace: true });
+    if (user) {
+      navigate({ to: "/dashboard", replace: true });
+    }
   }, [user, navigate]);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const result = authService.signIn(email, password);
+    setIsSubmitting(true);
+    setError("");
+    const result = await authService.signIn(email, password);
+    setIsSubmitting(false);
     if (result.error) {
       setError(result.error);
       return;
     }
-    setError("");
     navigate({ to: "/dashboard", replace: true });
   }
 
@@ -53,38 +57,38 @@ function LoginPage() {
     <div className="grid min-h-screen lg:grid-cols-2">
       <section className="hidden flex-col justify-between border-r bg-sidebar p-10 lg:flex">
         <div>
-          <p className="font-display text-xl font-bold tracking-tight">Vecta Logic</p>
-          <p className="label-mono mt-1">Gate Approval Control · MVP</p>
+          <p className="font-display text-xl font-bold tracking-tight">Nexus AI Ops</p>
+          <p className="label-mono mt-1">Intelligent Operations & Routing</p>
         </div>
         <div className="space-y-6">
           <h2 className="max-w-sm font-display text-4xl font-bold leading-[1.05] tracking-tight">
-            Every vehicle at the gate, approved by the right person.
+            Streamline operational tasks seamlessly.
           </h2>
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex items-start gap-3">
-              <Truck className="mt-0.5 size-4 text-primary" />
-              Data entry captures the manifest at the barrier.
+              <Database className="mt-0.5 size-4 text-primary shrink-0" />
+              Connected Google Drive documents and folders serve as active data sources.
             </li>
             <li className="flex items-start gap-3">
-              <ShieldCheck className="mt-0.5 size-4 text-primary" />
-              Branch + company + vehicle type routes to a mapped approver.
+              <Network className="mt-0.5 size-4 text-primary shrink-0" />
+              Custom rules and contextual LLMs classify incoming payload rows to authorized departments.
             </li>
             <li className="flex items-start gap-3">
-              <Volume2 className="mt-0.5 size-4 text-primary" />
-              Approvers get an instant voice alert in English or Tamil.
+              <ShieldCheck className="mt-0.5 size-4 text-primary shrink-0" />
+              Row Level Security ensures strict isolation at the postgres database layer.
             </li>
           </ul>
         </div>
         <p className="label-mono">
-          Demo data only · Google Drive / Sheets sync pending client confirmation
+          Powered by Supabase · Auth & PostgreSQL
         </p>
       </section>
 
-      <section className="flex items-center justify-center p-6">
+      <section className="flex items-center justify-center p-6 bg-background">
         <div className="w-full max-w-sm">
           <h1 className="font-display text-2xl font-bold tracking-tight">Sign in</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Use a demo account below to explore each role.
+            Use a pre-seeded Demo User to sign in directly to Supabase Auth.
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
@@ -110,15 +114,16 @@ function LoginPage() {
                 required
               />
             </div>
-            {error && <p className="text-sm text-danger">{error}</p>}
-            <Button type="submit" className="w-full">
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="animate-spin size-4 mr-2" /> : null}
               Sign in
             </Button>
           </form>
 
           <div className="mt-6 rounded-sm border bg-surface p-3">
-            <p className="label-mono">Demo accounts · password {DEMO_PASSWORD}</p>
-            <div className="mt-2 space-y-1">
+            <p className="text-[10px] uppercase font-bold text-muted-foreground pb-2 text-center tracking-widest border-b mb-2">Supabase Demo Users (password123)</p>
+            <div className="space-y-1">
               {DEMO_ACCOUNTS.map((account) => (
                 <button
                   key={account.email}
@@ -130,7 +135,7 @@ function LoginPage() {
                   className="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
                 >
                   <span className="font-mono text-xs">{account.email}</span>
-                  <span className="label-mono">{account.role}</span>
+                  <span className="label-mono text-[10px]">{account.dept}</span>
                 </button>
               ))}
             </div>

@@ -1,65 +1,77 @@
 /**
- * Domain model for the Vehicle Approval & Voice Notification System.
- *
- * These types mirror the intended relational schema (users, vehicle_entries,
- * approval_requests, notifications, activity_logs, approval_rules). Keep them
- * loose enough to absorb column changes once the real Excel / Google Drive
- * structure is confirmed.
+ * Domain model for Nexus AI Operations Assistant.
+ * Fully aligned with Supabase PostgreSQL schema.
  */
 
-export type UserRole = "admin" | "data_entry" | "approver";
+export type UserRole = "admin" | "department_user" | "manager";
 
 export interface User {
-  id: string;
+  id: string; // UUID matches auth.uid()
   name: string;
   email: string;
+  department_id: string | null;
   role: UserRole;
-  branch: string;
-  department: string;
   active: boolean;
   created_at: string;
+  updated_at: string;
 }
 
-export interface VehicleEntry {
+export interface Department {
   id: string;
-  vehicle_number: string;
-  company_name: string;
-  driver_name: string;
-  vehicle_type: string;
-  location: string;
-  entry_date: string;
-  entry_time: string;
-  remarks: string;
-  created_by: string; // users.id
+  name: string;
+  description: string | null;
+  active: boolean;
   created_at: string;
+  updated_at: string;
 }
 
-export type ApprovalStatus = "pending" | "approved" | "rejected";
+export type TaskStatus = "unassigned" | "pending" | "in_progress" | "completed" | "rejected" | "cancelled";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
 
-export interface ApprovalRequest {
+export interface AppTask {
   id: string;
-  vehicle_entry_id: string;
-  approver_id: string | null;
-  status: ApprovalStatus;
-  remarks: string;
-  rejection_reason: string;
+  title: string;
+  description: string | null;
+  source_file_id: string | null; // references data_sources(id)
+  source_file_name: string | null;
+  source_sheet_name: string | null;
+  source_row_key: string | null;
+  department_id: string | null; // references departments(id)
+  assigned_user_id: string | null; // references app_users(id)
+  priority: TaskPriority;
+  status: TaskStatus;
+  created_by: string | null;
+  ai_classification: boolean;
+  ai_confidence: number | null;
   created_at: string;
-  actioned_at: string | null;
+  updated_at: string;
+  completed_at: string | null;
 }
 
-export type NotificationType =
-  | "approval_request"
-  | "approval_result"
-  | "assignment_required"
-  | "system";
+export interface AiRule {
+  id: string;
+  name: string;
+  description: string | null;
+  keywords: string; // comma-separated
+  source_conditions: string | null;
+  target_department_id: string | null;
+  priority: TaskPriority;
+  active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type NotificationType = "task_assigned" | "task_updated" | "system_alert";
 
 export interface AppNotification {
   id: string;
-  user_id: string;
+  user_id: string | null;
+  department_id: string | null;
+  task_id: string | null;
   title: string;
   message: string;
-  notification_type: NotificationType;
-  related_id: string | null; // approval_requests.id
+  type: string;
   is_read: boolean;
   created_at: string;
 }
@@ -70,46 +82,87 @@ export interface ActivityLog {
   action: string;
   entity_type: string;
   entity_id: string | null;
-  description: string;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 }
 
-export interface ApprovalRule {
+// ── Google Drive Integration ───────────────────────────────────────────
+
+export interface GoogleDriveConnection {
   id: string;
-  branch: string;
-  company_name: string;
-  vehicle_type: string; // "*" means any
-  approver_id: string;
-  backup_approver_id: string | null;
+  user_id: string;
+  google_account_email: string;
+  encrypted_access_token: string | null;
+  encrypted_refresh_token: string | null;
+  expiry: string | null;
+  scopes: string | null;
+  status: string;
+  selected_folder_id: string | null;
+  selected_folder_name: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface UserSettings {
-  voice_enabled: boolean;
-  voice_language: "en" | "ta";
+// Data Sources (formerly monitored files)
+export interface DataSourceModel {
+  id: string;
+  google_file_id: string;
+  google_folder_id: string | null;
+  file_name: string;
+  file_type: string | null;
+  mime_type: string | null;
+  enabled: boolean;
+  last_modified_at: string | null;
+  last_synced_at: string | null;
+  row_count: number;
+  sync_status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Rows
+export interface DataSourceRow {
+  id: string;
+  data_source_id: string;
+  sheet_name: string;
+  row_key: string;
+  row_hash: string;
+  row_data: Record<string, unknown>; // mapped to JSONB
+  first_seen_at: string;
+  last_seen_at: string;
+  updated_at: string;
+}
+
+// Standardized mapping aliases for code compatibility if needed
+// Note: We use the actual Postgres naming globally now
+export type DriveFolder = { id: string; name: string; mimeType: string; modifiedTime: string };
+export type DriveFile = { id: string; name: string; mimeType: string; modifiedTime: string; size?: string };
+export type GoogleDriveConnectionSafe = GoogleDriveConnection;
+
+export interface ClassificationResult {
+  department: string;
+  is_actionable: boolean;
+  task_title: string;
+  task_description: string;
+  priority: "low" | "medium" | "high" | "critical" | "urgent";
+  confidence: number;
+}
+
+export interface QAAnswer {
+  answer: string;
+  sources: { file: string; sheet: string }[];
 }
 
 export interface Database {
   users: User[];
-  vehicle_entries: VehicleEntry[];
-  approval_requests: ApprovalRequest[];
+  departments: Department[];
+  tasks: AppTask[];
+  ai_rules: AiRule[];
   notifications: AppNotification[];
   activity_logs: ActivityLog[];
-  approval_rules: ApprovalRule[];
-  settings: Record<string, UserSettings>;
-  session_user_id: string | null;
+  google_drive_connections: GoogleDriveConnection[];
+  data_sources: DataSourceModel[];
+  data_source_rows: DataSourceRow[];
+
+  session_user_id: string | null; // local state only
 }
-
-export const ROLE_LABELS: Record<UserRole, string> = {
-  admin: "Admin",
-  data_entry: "Data Entry",
-  approver: "Approver",
-};
-
-export const VEHICLE_TYPES = [
-  "Container Truck",
-  "Trailer",
-  "Tanker",
-  "Mini Truck",
-  "Tipper",
-  "Van",
-] as const;
