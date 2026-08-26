@@ -28,7 +28,7 @@ const NAV: NavItem[] = [
   { to: "/tasks", label: "Tasks", icon: CheckSquare, roles: ["admin", "department_user"] },
   { to: "/departments", label: "Departments", icon: Network, roles: ["admin"] },
   { to: "/users", label: "Users", icon: Users, roles: ["admin"] },
-  { to: "/ai-rules", label: "AI Rules / Mapping", icon: BookOpen, roles: ["admin"] },
+  { to: "/ai-rules", label: "Train AI", icon: BookOpen, roles: ["admin"] },
   { to: "/notifications", label: "Notifications", icon: Bell, roles: ["admin", "department_user"] },
   { to: "/activity-logs", label: "Activity Logs", icon: Activity, roles: ["admin"] },
   { to: "/settings", label: "Settings", icon: Settings, roles: ["admin", "department_user"] }, // Settings covers Profile for Dept user
