@@ -10,7 +10,7 @@ export const Route = createFileRoute("/users")({
 
 function UsersPage() {
     const user = useSession();
-    if (!user) return null;
+    if (!user) return <Navigate to="/" replace />;
     if (user.role !== "admin") return <Navigate to="/dashboard" replace />;
     return (
         <AppShell

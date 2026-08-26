@@ -12,7 +12,7 @@ function DashboardPage() {
   const user = useSession();
   const db = useDatabase();
 
-  if (!user) return null;
+  if (!user) return <Navigate to="/" replace />;
 
   const isAdmin = user.role === "admin";
 
