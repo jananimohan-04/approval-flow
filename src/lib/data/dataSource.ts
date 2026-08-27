@@ -10,8 +10,12 @@ export interface DataSource {
   insert<T extends TableName>(table: T, row: Database[T][number]): Promise<Database[T][number]>;
   update<T extends TableName>(table: T, id: string, patch: Partial<Database[T][number]>): Promise<void>;
   remove(table: TableName, id: string): Promise<void>;
-  sync(): Promise<{ synced: boolean; message: string }>;
+  sync(): Promise<{ synced: boolean; message?: string }>;
   hydrate(): Promise<void>;
+
+  insertLocal<T extends TableName>(table: T, row: Database[T][number]): void;
+  updateLocal<T extends TableName>(table: T, id: string, patch: Partial<Database[T][number]>): void;
+  removeLocal(table: TableName, id: string): void;
 }
 
 class AuthoritativeSupabaseDataSource implements DataSource {
@@ -166,6 +170,30 @@ class AuthoritativeSupabaseDataSource implements DataSource {
       synced: true,
       message: "Sync managed by Supabase Realtime natively.",
     };
+  }
+
+  insertLocal<T extends TableName>(table: T, row: Database[T][number]) {
+    mutate((db) => {
+      if ((db[table] as any[]).some((r) => r.id === (row as any).id)) return db;
+      return { ...db, [table]: [row, ...(db[table] as any[])] } as Database;
+    });
+  }
+
+  updateLocal<T extends TableName>(table: T, id: string, patch: Partial<Database[T][number]>) {
+    mutate((db) => {
+      const arr = db[table] as any[];
+      return {
+        ...db,
+        [table]: arr.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      } as Database;
+    });
+  }
+
+  removeLocal(table: TableName, id: string) {
+    mutate((db) => {
+      const arr = db[table] as any[];
+      return { ...db, [table]: arr.filter((item) => item.id !== id) } as Database;
+    });
   }
 }
 

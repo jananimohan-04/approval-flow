@@ -59,28 +59,20 @@ export const notificationService = {
   async markRead(id: string) {
     const notification = dataSourceService.list("notifications").find((n) => n.id === id);
     if (!notification || notification.is_read) return;
-    await dataSourceService.update("notifications", id, { is_read: true });
-    activityService.log({
-      user_id: notification.user_id,
-      action: "notification.read",
-      entity_type: "notification",
-      entity_id: id,
-      description: `Notification read: ${notification.title}`,
+    await dataSourceService.update("notifications", id, {
+      is_read: true,
+      read_at: new Date().toISOString()
     });
   },
 
   async markAllRead(userId: string) {
     const unread = dataSourceService.list("notifications").filter(n => n.user_id === userId && !n.is_read);
-    const promises = unread.map(n => dataSourceService.update("notifications", n.id, { is_read: true }));
+    const readAt = new Date().toISOString();
+    const promises = unread.map(n => dataSourceService.update("notifications", n.id, {
+      is_read: true,
+      read_at: readAt
+    }));
     await Promise.all(promises);
-
-    activityService.log({
-      user_id: userId,
-      action: "notification.read_all",
-      entity_type: "notification",
-      entity_id: null,
-      description: "All notifications marked as read",
-    });
   },
 
   // Settings are not in the Database model explicitly unless we add them

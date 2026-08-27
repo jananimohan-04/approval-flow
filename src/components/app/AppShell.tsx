@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { NotificationBell } from "./NotificationBell";
 import { VoiceListener } from "./VoiceListener";
 import { useSession } from "@/hooks/useSession";
+import { useSupabaseRealtime } from "@/hooks/useSupabaseRealtime";
 import { authService } from "@/lib/services/authService";
 import type { AppRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,7 @@ export function AppShell({
 }) {
   const user = useSession();
   const navigate = useNavigate();
+  useSupabaseRealtime();
 
   useEffect(() => {
     if (!user) navigate({ to: "/", replace: true });

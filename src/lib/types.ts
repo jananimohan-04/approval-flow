@@ -85,6 +85,7 @@ export interface AppNotification {
   type: string;
   is_read: boolean;
   created_at: string;
+  read_at?: string | null;
 }
 
 export interface ActivityLog {
