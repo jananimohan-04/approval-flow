@@ -81,6 +81,7 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     let conn: any = null;
     if (serviceUrl && serviceKey) {
         const serviceSupabase = createClient(serviceUrl, serviceKey);
+        // Try 1: Match by exact user_id
         const { data: conns } = await serviceSupabase.from('google_drive_connections')
             .select('user_id, encrypted_access_token')
             .eq('user_id', user.id)
@@ -88,6 +89,17 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
             .eq('status', 'connected')
             .limit(1);
         conn = conns && conns.length > 0 ? conns[0] : null;
+
+        // Try 2: Match by email (local password user != Vercel OAuth user)
+        if (!conn && user.email) {
+            const { data: conns2 } = await serviceSupabase.from('google_drive_connections')
+                .select('user_id, encrypted_access_token')
+                .eq('google_account_email', user.email)
+                .not('encrypted_access_token', 'is', null)
+                .eq('status', 'connected')
+                .limit(1);
+            conn = conns2 && conns2.length > 0 ? conns2[0] : null;
+        }
     }
 
     // Fallback: try with anon client in case service key is unavailable
@@ -102,8 +114,8 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     }
 
     if (!conn || !conn.encrypted_access_token) {
-        console.error("Drive connection lookup failed for user:", user.id, "conn:", conn);
-        throw new Error("No connected Drive account with valid tokens found.");
+        console.error("Drive connection lookup failed for user:", user.id, "email:", user.email, "conn:", conn);
+        throw new Error("No connected Drive account with valid tokens found. Please connect Google Drive first.");
     }
 
     const token = conn.encrypted_access_token;
