@@ -63,7 +63,7 @@ function LoginPage() {
 
   if (user === undefined) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-zinc-950">
+      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-zinc-950">
         <div className="flex flex-col items-center gap-4">
           <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-white" />
           <p className="text-sm font-medium text-white/50 animate-pulse">Initializing Security...</p>
@@ -73,7 +73,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen w-full lg:grid-cols-2">
+    <div className="grid min-h-[100dvh] w-full lg:grid-cols-2">
       <section className="hidden flex-col justify-between bg-zinc-950 p-10 text-white lg:flex">
         <div className="flex items-center gap-2 font-display text-xl tracking-tight">
           <span className="flex size-8 items-center justify-center rounded-md bg-white font-bold text-zinc-950">

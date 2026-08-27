@@ -93,7 +93,7 @@ export function AppShell({
   if (!user) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-[100dvh] bg-background">
       <VoiceListener user={user} />
       <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar md:flex">
         <div className="border-b px-4 py-4">
@@ -116,9 +116,9 @@ export function AppShell({
           <Button
             variant="outline"
             size="sm"
-            className="mt-3 w-full justify-start gap-2"
-            onClick={() => {
-              authService.signOut();
+            className="mt-3 w-full justify-start gap-2 cursor-pointer relative z-50"
+            onClick={async () => {
+              await authService.signOut();
               navigate({ to: "/", replace: true });
             }}
           >
@@ -144,9 +144,9 @@ export function AppShell({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start gap-2"
-                  onClick={() => {
-                    authService.signOut();
+                  className="w-full justify-start gap-2 cursor-pointer relative z-50 pointer-events-auto"
+                  onClick={async () => {
+                    await authService.signOut();
                     navigate({ to: "/", replace: true });
                   }}
                 >
