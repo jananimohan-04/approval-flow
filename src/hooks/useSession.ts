@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { dataSourceService } from "@/lib/data/dataSource";
 import { toast } from "sonner";
 
-export function useSession(): AppUser | null {
+export function useSession(): AppUser | null | undefined {
   const db = useDatabase();
   const [init, setInit] = useState(false);
 
@@ -71,6 +71,7 @@ export function useSession(): AppUser | null {
     };
   }, [init]);
 
+  if (!init) return undefined;
   if (!db.session_user_id) return null;
   return db.users.find((u) => u.id === db.session_user_id) ?? null;
 }

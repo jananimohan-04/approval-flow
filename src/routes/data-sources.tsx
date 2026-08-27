@@ -24,7 +24,8 @@ export const Route = createFileRoute("/data-sources")({
 
 function DataSourcesPage() {
     const user = useSession();
-    if (!user) return <Navigate to="/" replace />;
+    if (user === undefined) return null;
+    if (user === null) return <Navigate to="/" replace />;
     if (user.role !== "admin" && user.role !== "company_admin" && user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
     const db = useDatabase();
 
@@ -35,7 +36,8 @@ function DataSourcesPage() {
     const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
     const [checking, setChecking] = useState(false);
 
-    if (!user) return <Navigate to="/" replace />;
+    if (user === undefined) return null;
+    if (user === null) return <Navigate to="/" replace />;
 
     const connection = db.google_drive_connections.find((c) => c.user_id === user.id && c.status === "connected");
     const monitoredFiles = db.data_sources;

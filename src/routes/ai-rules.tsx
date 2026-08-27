@@ -14,7 +14,8 @@ function AiRulesPage() {
     const db = useDatabase();
     const user = useSession();
 
-    if (!user) return <Navigate to="/" replace />;
+    if (user === undefined) return null;
+    if (user === null) return <Navigate to="/" replace />;
     if (user.role !== "admin" && user.role !== "company_admin" && user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
 
     return (

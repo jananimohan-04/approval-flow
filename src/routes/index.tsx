@@ -61,6 +61,17 @@ function LoginPage() {
     }
   }
 
+  if (user === undefined) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-zinc-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-8 animate-spin rounded-full border-4 border-white/20 border-t-white" />
+          <p className="text-sm font-medium text-white/50 animate-pulse">Initializing Security...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-2">
       <section className="hidden flex-col justify-between bg-zinc-950 p-10 text-white lg:flex">

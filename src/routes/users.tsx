@@ -27,7 +27,8 @@ function UsersPage() {
     const [role, setRole] = useState<AppRole>("department_user");
     const [loading, setLoading] = useState(false);
 
-    if (!user) return <Navigate to="/" replace />;
+    if (user === undefined) return null;
+    if (user === null) return <Navigate to="/" replace />;
     if (user.role !== "super_admin" && user.role !== "company_admin" && user.role !== "admin") return <Navigate to="/dashboard" replace />;
 
     async function handlePreAuthorizeUser(e: React.FormEvent) {

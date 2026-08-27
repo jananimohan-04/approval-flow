@@ -23,7 +23,8 @@ function TasksPage() {
     const [filterDepartment, setFilterDepartment] = useState<string>("all");
     const [filterStatus, setFilterStatus] = useState<string>("all");
 
-    if (!user) return <Navigate to="/" replace />;
+    if (user === undefined) return null;
+    if (user === null) return <Navigate to="/" replace />;
 
     // Department users only see their department's tasks, Admins see all
     const isDeptUser = user.role === "department_user";

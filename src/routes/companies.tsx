@@ -27,7 +27,8 @@ function CompaniesPage() {
     const [search, setSearch] = useState("");
     const [addingUserTo, setAddingUserTo] = useState<string | null>(null);
 
-    if (!user) return <Navigate to="/" replace />;
+    if (user === undefined) return null;
+    if (user === null) return <Navigate to="/" replace />;
     if (user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
 
     async function handleCreateCompany(e: React.FormEvent) {

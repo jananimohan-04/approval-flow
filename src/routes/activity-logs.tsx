@@ -66,7 +66,8 @@ function ActivityLogsPage() {
     const [userFilter, setUserFilter] = useState("all");
     const [companyFilter, setCompanyFilter] = useState("all");
 
-    if (!user) return <Navigate to="/" replace />;
+    if (user === undefined) return null;
+    if (user === null) return <Navigate to="/" replace />;
     if (user.role !== "admin" && user.role !== "company_admin" && user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
 
     const isSuperAdmin = user.role === "super_admin";
