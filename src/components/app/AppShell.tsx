@@ -10,31 +10,42 @@ import { NotificationBell } from "./NotificationBell";
 import { VoiceListener } from "./VoiceListener";
 import { useSession } from "@/hooks/useSession";
 import { authService } from "@/lib/services/authService";
-import { type UserRole } from "@/lib/types";
+import type { AppRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
   to: string;
   label: string;
   icon: any;
-  roles: UserRole[]
+  roles: AppRole[];
 };
 
 const NAV: NavItem[] = [
-  // Admin & Department User
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "department_user"] },
-  { to: "/data-sources", label: "Data Sources", icon: Database, roles: ["admin"] },
-  { to: "/ai-assistant", label: "AI Assistant", icon: Bot, roles: ["admin", "department_user"] },
-  { to: "/tasks", label: "Tasks", icon: CheckSquare, roles: ["admin", "department_user"] },
-  { to: "/departments", label: "Departments", icon: Network, roles: ["admin"] },
-  { to: "/users", label: "Users", icon: Users, roles: ["admin"] },
-  { to: "/ai-rules", label: "Train AI", icon: BookOpen, roles: ["admin"] },
-  { to: "/notifications", label: "Notifications", icon: Bell, roles: ["admin", "department_user"] },
-  { to: "/activity-logs", label: "Activity Logs", icon: Activity, roles: ["admin"] },
-  { to: "/settings", label: "Settings", icon: Settings, roles: ["admin", "department_user"] }, // Settings covers Profile for Dept user
+  // Super Admin Only
+  { to: "/companies", label: "Companies", icon: Database, roles: ["super_admin"] },
+
+  // Dashboard & Common
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["super_admin", "company_admin", "admin", "department_user"] },
+
+  // Tasks & AI
+  { to: "/tasks", label: "Tasks", icon: CheckSquare, roles: ["super_admin", "company_admin", "admin", "department_user"] },
+  { to: "/ai-assistant", label: "AI Assistant", icon: Bot, roles: ["company_admin", "admin", "department_user"] }, // Specific to company data context, super_admin wouldn't usually ask this without impersonation
+
+  // Management
+  { to: "/departments", label: "Departments", icon: Network, roles: ["super_admin", "company_admin", "admin"] },
+  { to: "/users", label: "Users", icon: Users, roles: ["super_admin", "company_admin", "admin"] },
+  { to: "/data-sources", label: "Data Sources", icon: Database, roles: ["super_admin", "company_admin", "admin"] },
+  { to: "/ai-rules", label: "AI Rules", icon: BookOpen, roles: ["super_admin", "company_admin", "admin"] },
+
+  // Monitoring
+  { to: "/notifications", label: "Notifications", icon: Bell, roles: ["super_admin", "company_admin", "admin", "department_user"] },
+  { to: "/activity-logs", label: "Activity Logs", icon: Activity, roles: ["super_admin", "company_admin", "admin"] },
+
+  // Settings
+  { to: "/settings", label: "Settings", icon: Settings, roles: ["super_admin", "company_admin", "admin", "department_user"] },
 ];
 
-function NavList({ role, onNavigate }: { role: UserRole; onNavigate?: () => void }) {
+function NavList({ role, onNavigate }: { role: AppRole; onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <nav className="flex flex-col gap-0.5 p-2">

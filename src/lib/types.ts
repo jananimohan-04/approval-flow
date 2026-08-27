@@ -3,32 +3,45 @@
  * Fully aligned with Supabase PostgreSQL schema.
  */
 
-export type UserRole = "admin" | "department_user" | "manager";
+export type AppRole = 'super_admin' | 'company_admin' | 'admin' | 'department_user'; // 'admin' kept for legacy migrating
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'rejected' | 'unassigned';
+export type SyncStatus = 'idle' | 'syncing' | 'error';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
 
-export interface User {
-  id: string; // UUID matches auth.uid()
-  name: string;
-  email: string;
-  department_id: string | null;
-  role: UserRole;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Department {
+export interface CompanyModel {
   id: string;
   name: string;
+  code: string;
   description: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AppUser {
+  id: string;
+  auth_user_id?: string;
+  company_id: string;
+  name: string;
+  email: string;
+  department_id: string;
+  role: AppRole;
+  active: boolean;
+  created_at?: string;
+}
+
+export interface DepartmentModel {
+  id: string;
+  company_id: string;
+  name: string;
+  description: string;
   active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export type TaskStatus = "unassigned" | "pending" | "in_progress" | "completed" | "rejected" | "cancelled";
-export type TaskPriority = "low" | "medium" | "high" | "urgent";
-
 export interface AppTask {
+  company_id: string;
   id: string;
   title: string;
   description: string | null;
@@ -49,6 +62,7 @@ export interface AppTask {
 }
 
 export interface AiRule {
+  company_id: string;
   id: string;
   name: string;
   description: string | null;
@@ -65,6 +79,7 @@ export interface AiRule {
 export type NotificationType = "task_assigned" | "task_updated" | "system_alert";
 
 export interface AppNotification {
+  company_id: string;
   id: string;
   user_id: string | null;
   department_id: string | null;
@@ -77,6 +92,7 @@ export interface AppNotification {
 }
 
 export interface ActivityLog {
+  company_id: string;
   id: string;
   user_id: string | null;
   action: string;
@@ -89,6 +105,7 @@ export interface ActivityLog {
 // ── Google Drive Integration ───────────────────────────────────────────
 
 export interface GoogleDriveConnection {
+  company_id: string;
   id: string;
   user_id: string;
   google_account_email: string;
@@ -154,8 +171,9 @@ export interface QAAnswer {
 }
 
 export interface Database {
-  users: User[];
-  departments: Department[];
+  companies: CompanyModel[];
+  users: AppUser[];
+  departments: DepartmentModel[];
   tasks: AppTask[];
   ai_rules: AiRule[];
   notifications: AppNotification[];

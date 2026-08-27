@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app/AppShell";
-import { Users, Plus, ShieldCheck, Mail, Network, Key } from "lucide-react";
+import { Users, Plus, ShieldCheck, Mail, Network, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSession } from "@/hooks/useSession";
-import { useDatabase } from "@/lib/store";
-import { createUserFn } from "@/lib/services/adminFunctions";
+import { useDatabase, uid } from "@/lib/store";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { dataSourceService } from "@/lib/data/dataSource";
+import type { AppRole } from "@/lib/types";
 
 export const Route = createFileRoute("/users")({
     component: UsersPage,
@@ -22,34 +23,33 @@ function UsersPage() {
     const [open, setOpen] = useState(false);
     const [email, setEmail] = useState("");
     const [name, setName] = useState("");
-    const [password, setPassword] = useState("password123");
     const [deptId, setDeptId] = useState(db.departments[0]?.id || "");
-    const [role, setRole] = useState<"admin" | "department_user">("department_user");
+    const [role, setRole] = useState<AppRole>("department_user");
     const [loading, setLoading] = useState(false);
 
     if (!user) return <Navigate to="/" replace />;
-    if (user.role !== "admin") return <Navigate to="/dashboard" replace />;
+    if (user.role !== "super_admin" && user.role !== "company_admin" && user.role !== "admin") return <Navigate to="/dashboard" replace />;
 
-    async function handleCreateUser(e: React.FormEvent) {
+    async function handlePreAuthorizeUser(e: React.FormEvent) {
         e.preventDefault();
+        if (!user) return;
         setLoading(true);
         try {
-            const res = await createUserFn({
-                data: {
-                    email,
-                    name,
-                    password,
-                    department_id: deptId,
-                    role
-                }
-            });
+            await dataSourceService.insert("users", {
+                id: uid('usr'),
+                email,
+                name,
+                company_id: user.company_id, // Pin to current user's company (unless superadmin doing impersonation, but this suffices MVP)
+                department_id: deptId,
+                role,
+                active: true,
+                created_at: new Date().toISOString()
+            } as any);
 
-            if (res.success) {
-                toast.success("User created inside Supabase Auth & bound to App Users!");
-                setOpen(false);
-            } else {
-                toast.error(res.error || "Failed to create user");
-            }
+            toast.success("User pre-authorized! They can now log in via Google.");
+            setOpen(false);
+            setEmail("");
+            setName("");
         } catch (e: any) {
             toast.error(e.message);
         } finally {
@@ -59,34 +59,31 @@ function UsersPage() {
 
     return (
         <AppShell
-            title="Users & Departments"
-            subtitle="Manage internal accounts and role assignment"
+            title="Users Management"
+            subtitle="Pre-authorize Google Accounts for platform access"
             actions={
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
-                        <Button><Plus className="mr-2 size-4" /> Add User</Button>
+                        <Button><Plus className="mr-2 size-4" /> Pre-authorize User</Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Create New User</DialogTitle>
+                            <DialogTitle>Pre-authorize Google Login</DialogTitle>
                         </DialogHeader>
-                        <form onSubmit={handleCreateUser} className="space-y-4">
+                        <form onSubmit={handlePreAuthorizeUser} className="space-y-4">
+                            <p className="text-xs text-muted-foreground my-2">No password required. The user will be authenticated natively by Google when they click "Continue with Google". This will allow them into the application.</p>
                             <div className="space-y-2">
                                 <Label>Full Name</Label>
                                 <Input required value={name} onChange={e => setName(e.target.value)} />
                             </div>
                             <div className="space-y-2">
-                                <Label>Email</Label>
-                                <Input type="email" required value={email} onChange={e => setEmail(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Initial Password (Encrypted by Supabase)</Label>
-                                <Input required value={password} onChange={e => setPassword(e.target.value)} />
+                                <Label>Google Email Address</Label>
+                                <Input type="email" required placeholder="john@gmail.com" value={email} onChange={e => setEmail(e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label>Department</Label>
                                 <select
-                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                                     value={deptId}
                                     onChange={e => setDeptId(e.target.value)}
                                 >
@@ -98,16 +95,17 @@ function UsersPage() {
                             <div className="space-y-2">
                                 <Label>Role</Label>
                                 <select
-                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                                     value={role}
-                                    onChange={e => setRole(e.target.value as any)}
+                                    onChange={e => setRole(e.target.value as AppRole)}
                                 >
                                     <option value="department_user">Department User</option>
-                                    <option value="admin">System Administrator</option>
+                                    <option value="company_admin">Company Administrator</option>
+                                    {user.role === 'super_admin' && <option value="super_admin">Super Administrator</option>}
                                 </select>
                             </div>
                             <Button type="submit" disabled={loading} className="w-full">
-                                {loading ? "Creating..." : "Create User"}
+                                {loading ? "Authorizing..." : "Authorize Email"}
                             </Button>
                         </form>
                     </DialogContent>
@@ -149,13 +147,14 @@ function UsersPage() {
                 )}
             </div>
 
-            <div className="mt-8 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 rounded-xl p-4">
-                <h3 className="font-semibold flex items-center gap-2 mb-2 text-blue-800 dark:text-blue-200">
-                    <Key className="size-4" /> Password Security Note
+            <div className="mt-8 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 rounded-xl p-4">
+                <h3 className="font-semibold flex items-center gap-2 mb-2 text-amber-800 dark:text-amber-200">
+                    <Shield className="size-4" /> Google SSO Integrity
                 </h3>
-                <p className="text-sm text-blue-700/80 dark:text-blue-300">
-                    Passwords are irreversibly hashed and managed by the Supabase Auth Core layer.
-                    They cannot be viewed after creation. If a user loses their password, an Administrator can reset it directly in the Supabase Dashboard, or you can implement a standard email-based Magic Link flow.
+                <p className="text-sm text-amber-700/80 dark:text-amber-300">
+                    Authentication is strictly managed via Google OAuth. You do not create passwords for users.
+                    By adding a user here, you are pre-authorizing their specific Google Email address.
+                    If their address isn't listed here and active, they will be blocked from accessing the platform.
                 </p>
             </div>
         </AppShell>

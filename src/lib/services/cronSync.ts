@@ -45,10 +45,9 @@ export async function executeProductionCronSync(cronSecret: string) {
         await supabase.from("data_sources").update({ sync_status: "in_progress", updated_at: new Date().toISOString() }).eq("id", source.id);
 
         try {
-            // Retrieve Google Token from secure vault mapping (tokenStore mock bridged)
-            // Assumes connected user owns the folder
-            const connection = await supabase.from("google_drive_connections").select("user_id").eq("selected_folder_id", source.google_folder_id).single();
-            if (!connection.data) throw new Error("No connected user found for folder");
+            // Retrieve Google Token scoped explicitly to the company that owns this data source
+            const connection = await supabase.from("google_drive_connections").select("user_id").eq("company_id", source.company_id).single();
+            if (!connection.data) throw new Error("No connected user found for this company tenant");
 
             const userId = connection.data.user_id;
             const token = await getValidToken(userId); // Bridges OAuth secure refresh

@@ -68,6 +68,7 @@ class AuthoritativeSupabaseDataSource implements DataSource {
     if (!this.isConnected) return;
     try {
       const tables: { [key in TableName]: string } = {
+        companies: "companies",
         users: "app_users",
         departments: "departments",
         tasks: "tasks",

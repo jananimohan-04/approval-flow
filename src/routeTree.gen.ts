@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivityLogsRouteImport } from './routes/activity-logs'
 import { Route as AiAssistantRouteImport } from './routes/ai-assistant'
 import { Route as AiRulesRouteImport } from './routes/ai-rules'
+import { Route as CompaniesRouteImport } from './routes/companies'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DataSourcesRouteImport } from './routes/data-sources'
 import { Route as DepartmentsRouteImport } from './routes/departments'
@@ -40,6 +41,11 @@ const AiAssistantRoute = AiAssistantRouteImport.update({
 const AiRulesRoute = AiRulesRouteImport.update({
   id: '/ai-rules',
   path: '/ai-rules',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompaniesRoute = CompaniesRouteImport.update({
+  id: '/companies',
+  path: '/companies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/activity-logs': typeof ActivityLogsRoute
   '/ai-assistant': typeof AiAssistantRoute
   '/ai-rules': typeof AiRulesRoute
+  '/companies': typeof CompaniesRoute
   '/dashboard': typeof DashboardRoute
   '/data-sources': typeof DataSourcesRoute
   '/departments': typeof DepartmentsRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/activity-logs': typeof ActivityLogsRoute
   '/ai-assistant': typeof AiAssistantRoute
   '/ai-rules': typeof AiRulesRoute
+  '/companies': typeof CompaniesRoute
   '/dashboard': typeof DashboardRoute
   '/data-sources': typeof DataSourcesRoute
   '/departments': typeof DepartmentsRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/activity-logs': typeof ActivityLogsRoute
   '/ai-assistant': typeof AiAssistantRoute
   '/ai-rules': typeof AiRulesRoute
+  '/companies': typeof CompaniesRoute
   '/dashboard': typeof DashboardRoute
   '/data-sources': typeof DataSourcesRoute
   '/departments': typeof DepartmentsRoute
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/activity-logs'
     | '/ai-assistant'
     | '/ai-rules'
+    | '/companies'
     | '/dashboard'
     | '/data-sources'
     | '/departments'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/activity-logs'
     | '/ai-assistant'
     | '/ai-rules'
+    | '/companies'
     | '/dashboard'
     | '/data-sources'
     | '/departments'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/activity-logs'
     | '/ai-assistant'
     | '/ai-rules'
+    | '/companies'
     | '/dashboard'
     | '/data-sources'
     | '/departments'
@@ -176,6 +188,7 @@ export interface RootRouteChildren {
   ActivityLogsRoute: typeof ActivityLogsRoute
   AiAssistantRoute: typeof AiAssistantRoute
   AiRulesRoute: typeof AiRulesRoute
+  CompaniesRoute: typeof CompaniesRoute
   DashboardRoute: typeof DashboardRoute
   DataSourcesRoute: typeof DataSourcesRoute
   DepartmentsRoute: typeof DepartmentsRoute
@@ -214,6 +227,13 @@ declare module '@tanstack/react-router' {
       path: '/ai-rules'
       fullPath: '/ai-rules'
       preLoaderRoute: typeof AiRulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/companies': {
+      id: '/companies'
+      path: '/companies'
+      fullPath: '/companies'
+      preLoaderRoute: typeof CompaniesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -280,6 +300,7 @@ const rootRouteChildren: RootRouteChildren = {
   ActivityLogsRoute: ActivityLogsRoute,
   AiAssistantRoute: AiAssistantRoute,
   AiRulesRoute: AiRulesRoute,
+  CompaniesRoute: CompaniesRoute,
   DashboardRoute: DashboardRoute,
   DataSourcesRoute: DataSourcesRoute,
   DepartmentsRoute: DepartmentsRoute,
