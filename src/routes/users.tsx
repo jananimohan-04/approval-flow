@@ -26,6 +26,7 @@ function UsersPage() {
     const [deptId, setDeptId] = useState(db.departments[0]?.id || "");
     const [role, setRole] = useState<AppRole>("department_user");
     const [loading, setLoading] = useState(false);
+    const [password, setPassword] = useState("");
 
     if (user === undefined) return null;
     if (user === null) return <Navigate to="/" replace />;
@@ -36,6 +37,12 @@ function UsersPage() {
         if (!user) return;
         setLoading(true);
         try {
+            if (password) {
+                const { createDatabaseAuthUserFn } = await import("@/lib/services/authFunctions");
+                const res = await createDatabaseAuthUserFn({ data: { email, password } });
+                if (!res.success) throw new Error(res.error || "Failed to create local password login.");
+            }
+
             await dataSourceService.insert("users", {
                 id: uid('usr'),
                 email,
@@ -47,10 +54,11 @@ function UsersPage() {
                 created_at: new Date().toISOString()
             } as any);
 
-            toast.success("User pre-authorized! They can now log in via Google.");
+            toast.success(password ? "User created with local password!" : "User pre-authorized! They can now log in via Google.");
             setOpen(false);
             setEmail("");
             setName("");
+            setPassword("");
         } catch (e: any) {
             toast.error(e.message);
         } finally {
@@ -84,6 +92,10 @@ function UsersPage() {
                             <div className="space-y-2">
                                 <Label>Google Email Address</Label>
                                 <Input type="email" required placeholder="john@gmail.com" value={email} onChange={e => setEmail(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Local Password (Optional Dev Bypass)</Label>
+                                <Input type="password" placeholder="Leave blank for Google only" value={password} onChange={e => setPassword(e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label>Department</Label>
