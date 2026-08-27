@@ -12,29 +12,34 @@ export function useSession(): AppUser | null | undefined {
   useEffect(() => {
     // Initial fetch of session state directly from Supabase
     const initSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.user?.email) {
-        // Ensure local DB is hydrated first
-        if (db.users.length === 0) {
-          await dataSourceService.hydrate();
-        }
-
-        const freshState = getDb();
-        const u = freshState.users.find(u => u.email === data.session!.user!.email);
-
-        if (!u || !u.active) {
-          await supabase.auth.signOut();
-          toast.error("Your Google account is not authorized to access this platform. Please contact your administrator.", { duration: 10000 });
-          mutate(store => ({ ...store, session_user_id: null }));
-        } else {
-          // Found and active, link auth_user_id if not present
-          if (!u.auth_user_id) {
-            await dataSourceService.update("users", u.id, { auth_user_id: data.session!.user!.id } as any);
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user?.email) {
+          // Ensure local DB is hydrated first
+          if (db.users.length === 0) {
+            await dataSourceService.hydrate();
           }
-          mutate(store => ({ ...store, session_user_id: u.id }));
+
+          const freshState = getDb();
+          const u = freshState.users.find(u => u.email === data.session!.user!.email);
+
+          if (!u || !u.active) {
+            await supabase.auth.signOut();
+            toast.error("Your Google account is not authorized to access this platform. Please contact your administrator.", { duration: 10000 });
+            mutate(store => ({ ...store, session_user_id: null }));
+          } else {
+            // Found and active, link auth_user_id if not present
+            if (!u.auth_user_id) {
+              await dataSourceService.update("users", u.id, { auth_user_id: data.session!.user!.id } as any).catch(console.error);
+            }
+            mutate(store => ({ ...store, session_user_id: u.id }));
+          }
         }
+      } catch (err) {
+        console.error("Session init failed:", err);
+      } finally {
+        setInit(true);
       }
-      setInit(true);
     };
 
     if (!init) {
@@ -45,23 +50,27 @@ export function useSession(): AppUser | null | undefined {
       if (event === 'SIGNED_OUT') {
         mutate(store => ({ ...store, session_user_id: null }));
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session?.user?.email) {
-          // Await hydrate if missing
-          if (getDb().users.length === 0) {
-            await dataSourceService.hydrate();
-          }
-
-          const u = getFreshUserByEmail(session.user.email);
-          if (!u || !u.active) {
-            await supabase.auth.signOut();
-            toast.error("Your Google account is not authorized to access this platform. Please contact your administrator.", { duration: 10000 });
-            mutate(store => ({ ...store, session_user_id: null }));
-          } else {
-            if (!u.auth_user_id) {
-              await dataSourceService.update("users", u.id, { auth_user_id: session.user.id } as any);
+        try {
+          if (session?.user?.email) {
+            // Await hydrate if missing
+            if (getDb().users.length === 0) {
+              await dataSourceService.hydrate();
             }
-            mutate(store => ({ ...store, session_user_id: u.id }));
+
+            const u = getFreshUserByEmail(session.user.email);
+            if (!u || !u.active) {
+              await supabase.auth.signOut();
+              toast.error("Your Google account is not authorized to access this platform. Please contact your administrator.", { duration: 10000 });
+              mutate(store => ({ ...store, session_user_id: null }));
+            } else {
+              if (!u.auth_user_id) {
+                await dataSourceService.update("users", u.id, { auth_user_id: session.user.id } as any).catch(console.error);
+              }
+              mutate(store => ({ ...store, session_user_id: u.id }));
+            }
           }
+        } catch (err) {
+          console.error("Auth change error", err);
         }
       }
     });
