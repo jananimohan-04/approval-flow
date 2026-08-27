@@ -94,13 +94,13 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
         }
 
         // 2. Fetch the central Admin Drive connection for this company
-        // This ensures employees (department_users) can read data using the admin's authorized Drive token!
         if (companyId) {
             const { data: companyConns } = await serviceSupabase.from('google_drive_connections')
-                .select('user_id, encrypted_access_token')
+                .select('id, user_id, encrypted_access_token, encrypted_refresh_token')
                 .eq('company_id', companyId)
                 .not('encrypted_access_token', 'is', null)
                 .eq('status', 'connected')
+                .order('updated_at', { ascending: false })
                 .limit(1);
             conn = companyConns && companyConns.length > 0 ? companyConns[0] : null;
         }
@@ -108,9 +108,10 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
         // 3. Absolute wildcard fallback (if DB user routing is broken but testing is needed)
         if (!conn) {
             const { data: anyConn } = await serviceSupabase.from('google_drive_connections')
-                .select('user_id, encrypted_access_token')
+                .select('id, user_id, encrypted_access_token, encrypted_refresh_token')
                 .not('encrypted_access_token', 'is', null)
                 .eq('status', 'connected')
+                .order('updated_at', { ascending: false })
                 .limit(1);
             conn = anyConn && anyConn.length > 0 ? anyConn[0] : null;
         }
@@ -119,26 +120,62 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     // Fallback: try with anon client in case service key is unavailable
     if (!conn) {
         const { data: conns } = await supabase.from('google_drive_connections')
-            .select('user_id, encrypted_access_token')
+            .select('id, user_id, encrypted_access_token, encrypted_refresh_token')
             .eq('user_id', user.id)
             .not('encrypted_access_token', 'is', null)
             .eq('status', 'connected')
+            .order('updated_at', { ascending: false })
             .limit(1);
         conn = conns && conns.length > 0 ? conns[0] : null;
     }
 
     if (!conn || !conn.encrypted_access_token) {
-        console.error("Drive connection lookup failed for user:", user.id, "email:", user.email, "conn:", conn);
         throw new Error("No connected Drive account with valid tokens found. Please connect Google Drive first.");
     }
 
-    const token = conn.encrypted_access_token;
-
+    let token = conn.encrypted_access_token;
     const downloadUrl = fileData.mime_type === "application/vnd.google-apps.spreadsheet"
         ? `https://www.googleapis.com/drive/v3/files/${fileData.google_file_id}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
         : `https://www.googleapis.com/drive/v3/files/${fileData.google_file_id}?alt=media`;
 
-    const dlRes = await fetch(downloadUrl, { headers: { Authorization: `Bearer ${token}` } });
+    let dlRes = await fetch(downloadUrl, { headers: { Authorization: `Bearer ${token}` } });
+
+    // Handle Token Expiry completely automatically!
+    if (dlRes.status === 401 && conn.encrypted_refresh_token) {
+        const clientId = process.env["GOOGLE_CLIENT_ID"] || (import.meta as any).env?.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env["GOOGLE_CLIENT_SECRET"] || (import.meta as any).env?.GOOGLE_CLIENT_SECRET;
+
+        if (clientId && clientSecret) {
+            const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    refresh_token: conn.encrypted_refresh_token,
+                    grant_type: "refresh_token"
+                })
+            });
+
+            if (refreshRes.ok) {
+                const refreshed = await refreshRes.json();
+                token = refreshed.access_token;
+                // Retry download with new token
+                dlRes = await fetch(downloadUrl, { headers: { Authorization: `Bearer ${token}` } });
+
+                // Fire and forget updating the token in DB so it doesn't slow down the response
+                if (serviceUrl && serviceKey) {
+                    const adminClient = createClient(serviceUrl, serviceKey);
+                    adminClient.from('google_drive_connections')
+                        .update({ encrypted_access_token: token, updated_at: new Date().toISOString() })
+                        .eq('id', conn.id).then();
+                }
+            } else {
+                throw new Error("Google Drive connection expired and automatic renewal failed. Admin must reconnect Drive.");
+            }
+        }
+    }
+
     if (!dlRes.ok) throw new Error("Failed to read required data from connected Google Drive.");
 
     const buffer = await dlRes.arrayBuffer();
