@@ -80,6 +80,42 @@ function UsersPage() {
     }
   }
 
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editName, setEditName] = useState("");
+  const [editDeptId, setEditDeptId] = useState("");
+  const [editRole, setEditRole] = useState<AppRole>("department_user");
+  const [updateLoading, setUpdateLoading] = useState(false);
+
+  async function handleUpdateUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingUser) return;
+    setUpdateLoading(true);
+    try {
+      await dataSourceService.update("users", editingUser.id, {
+        name: editName,
+        department_id: editDeptId,
+        role: editRole
+      });
+      toast.success("User updated successfully");
+      setEditingUser(null);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUpdateLoading(false);
+    }
+  }
+
+  async function toggleActiveStatus(appUser: any) {
+    try {
+      await dataSourceService.update("users", appUser.id, {
+        active: !appUser.active
+      });
+      toast.success(appUser.active ? "User deactivated" : "User activated");
+    } catch (e: any) {
+      toast.error("Failed to update user status");
+    }
+  }
+
   const visibleUsers =
     user.role === "super_admin"
       ? db.users
@@ -198,8 +234,27 @@ function UsersPage() {
                   </div>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground bg-muted px-2 py-1 rounded">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditingUser(appUser);
+                    setEditName(appUser.name || "");
+                    setEditDeptId(appUser.department_id || "");
+                    setEditRole(appUser.role);
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant={appUser.active ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => toggleActiveStatus(appUser)}
+                >
+                  {appUser.active ? "Deactivate" : "Activate"}
+                </Button>
+                <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded ml-2 ${appUser.active ? 'text-primary bg-primary/10' : 'text-muted-foreground bg-muted'}`}>
                   {appUser.active ? "Active" : "Inactive"}
                 </span>
               </div>
@@ -224,6 +279,56 @@ function UsersPage() {
           platform.
         </p>
       </div>
+
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User Profile</DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <form onSubmit={handleUpdateUser} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Full Name</Label>
+                <Input required value={editName} onChange={(e) => setEditName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Department</Label>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  value={editDeptId}
+                  onChange={(e) => setEditDeptId(e.target.value)}
+                >
+                  <option value="">Unassigned</option>
+                  {db.departments
+                    .filter((d) => user.role === "super_admin" || d.company_id === user.company_id)
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value as AppRole)}
+                >
+                  <option value="department_user">Department User</option>
+                  <option value="company_admin">Company Administrator</option>
+                  {user.role === "super_admin" && (
+                    <option value="super_admin">Super Administrator</option>
+                  )}
+                </select>
+              </div>
+              <Button type="submit" disabled={updateLoading} className="w-full">
+                {updateLoading ? "Saving..." : "Save Changes"}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
