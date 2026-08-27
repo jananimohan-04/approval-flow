@@ -81,35 +81,38 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     let conn: any = null;
     if (serviceUrl && serviceKey) {
         const serviceSupabase = createClient(serviceUrl, serviceKey);
-        // Try 1: Match by exact user_id
-        const { data: conns } = await serviceSupabase.from('google_drive_connections')
-            .select('user_id, encrypted_access_token')
-            .eq('user_id', user.id)
-            .not('encrypted_access_token', 'is', null)
-            .eq('status', 'connected')
-            .limit(1);
-        conn = conns && conns.length > 0 ? conns[0] : null;
 
-        // Try 2: Match by email (local password user != Vercel OAuth user)
-        if (!conn && user.email) {
-            const { data: conns2 } = await serviceSupabase.from('google_drive_connections')
-                .select('user_id, encrypted_access_token')
-                .eq('google_account_email', user.email)
-                .not('encrypted_access_token', 'is', null)
-                .eq('status', 'connected')
-                .limit(1);
-            conn = conns2 && conns2.length > 0 ? conns2[0] : null;
+        // 1. Resolve user's tenant (company_id)
+        let companyId = null;
+        if (user.email) {
+            const { data: appUser } = await serviceSupabase.from("users").select("company_id").eq("email", user.email).single();
+            if (appUser?.company_id) companyId = appUser.company_id;
+        }
+        if (!companyId) {
+            const { data: appUser2 } = await serviceSupabase.from("users").select("company_id").eq("id", user.id).single();
+            if (appUser2?.company_id) companyId = appUser2.company_id;
         }
 
-        // Try 3: Last resort — grab any connected Drive account with a valid token
-        // (handles dev scenarios where local user email differs from Drive OAuth email)
+        // 2. Fetch the central Admin Drive connection for this company
+        // This ensures employees (department_users) can read data using the admin's authorized Drive token!
+        if (companyId) {
+            const { data: companyConns } = await serviceSupabase.from('google_drive_connections')
+                .select('user_id, encrypted_access_token')
+                .eq('company_id', companyId)
+                .not('encrypted_access_token', 'is', null)
+                .eq('status', 'connected')
+                .limit(1);
+            conn = companyConns && companyConns.length > 0 ? companyConns[0] : null;
+        }
+
+        // 3. Absolute wildcard fallback (if DB user routing is broken but testing is needed)
         if (!conn) {
-            const { data: conns3 } = await serviceSupabase.from('google_drive_connections')
+            const { data: anyConn } = await serviceSupabase.from('google_drive_connections')
                 .select('user_id, encrypted_access_token')
                 .not('encrypted_access_token', 'is', null)
                 .eq('status', 'connected')
                 .limit(1);
-            conn = conns3 && conns3.length > 0 ? conns3[0] : null;
+            conn = anyConn && anyConn.length > 0 ? anyConn[0] : null;
         }
     }
 
