@@ -56,6 +56,8 @@ export interface AppTask {
   created_by: string | null;
   ai_classification: boolean;
   ai_confidence: number | null;
+  classification_source?: "rule" | "ai" | "manual";
+  ai_rule_id?: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;

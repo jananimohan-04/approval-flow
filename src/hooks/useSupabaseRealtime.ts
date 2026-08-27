@@ -11,7 +11,7 @@ export function useSupabaseRealtime() {
         if (!user) return;
 
         // We only subscribe to notifications for this specific user to avoid cross-talk
-        const channel = supabase
+        const notifChannel = supabase
             .channel(`realtime:notifications:${user.id}`)
             .on(
                 "postgres_changes",
@@ -51,8 +51,39 @@ export function useSupabaseRealtime() {
                 }
             });
 
+        // Also strictly isolate Tasks realtime by Company.
+        const taskChannel = supabase
+            .channel(`realtime:tasks:${user.company_id}`)
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "tasks",
+                    filter: `company_id=eq.${user.company_id}`,
+                },
+                async (payload) => {
+                    if (payload.eventType === "INSERT") {
+                        const newTask = payload.new as any;
+                        dataSourceService.insertLocal("tasks", newTask);
+                    } else if (payload.eventType === "UPDATE") {
+                        const updatedTask = payload.new as any;
+                        dataSourceService.updateLocal("tasks", updatedTask.id, updatedTask);
+                    } else if (payload.eventType === "DELETE") {
+                        const deletedTask = payload.old as any;
+                        dataSourceService.removeLocal("tasks", deletedTask.id);
+                    }
+                }
+            )
+            .subscribe((status) => {
+                if (status === "SUBSCRIBED") {
+                    console.log("Subscribed to realtime tasks for company");
+                }
+            });
+
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(notifChannel);
+            supabase.removeChannel(taskChannel);
         };
     }, [user]);
 }
