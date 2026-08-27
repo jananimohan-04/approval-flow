@@ -69,7 +69,6 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     // 2. Fetch connection credentials bypassing user trust for server-executed Drive stream
     const { data: conns } = await supabase.from('google_drive_connections')
         .select('user_id, encrypted_access_token')
-        .eq('company_id', fileData.company_id)
         .limit(1);
 
     const conn = conns && conns.length > 0 ? conns[0] : null;

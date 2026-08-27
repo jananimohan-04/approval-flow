@@ -130,6 +130,7 @@ export const googleDriveService = {
         row_count: 0,
         sync_status: "pending",
         schema_snapshot: {},
+        company_id: getDb().users.find((u) => u.id === userId)?.company_id || null,
         created_at: now,
         updated_at: now,
       };
