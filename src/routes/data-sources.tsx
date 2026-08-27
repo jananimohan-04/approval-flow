@@ -73,7 +73,7 @@ function DataSourcesPage() {
             return;
         }
         try {
-            const res = await listGoogleFoldersFn({ data: { userId: user.id } });
+            const res = await listGoogleFoldersFn({ data: { userId: user.id, accessToken: connection.encrypted_access_token || "" } });
             setFolders(res.folders || []);
             if (!res.folders || res.folders.length === 0) toast.info("No folders found");
         } catch {
@@ -97,7 +97,7 @@ function DataSourcesPage() {
             return;
         }
         try {
-            const res = await listGoogleFilesInFolderFn({ data: { userId: user.id, folderId: folder.id } });
+            const res = await listGoogleFilesInFolderFn({ data: { userId: user.id, folderId: folder.id, accessToken: connection?.encrypted_access_token || "" } });
             setDriveFiles(res.files || []);
         } catch {
             toast.error("Failed to fetch files");
@@ -145,7 +145,7 @@ function DataSourcesPage() {
                 dataSourceService.update("data_sources", file.id, { last_synced_at: now, updated_at: now });
 
                 const dlRes = await downloadGoogleFileFn({
-                    data: { userId: user.id, fileId: file.google_file_id, mimeType: file.mime_type! },
+                    data: { userId: user.id, fileId: file.google_file_id, mimeType: file.mime_type!, accessToken: connection?.encrypted_access_token || "" },
                 });
 
                 if (!dlRes.success) {

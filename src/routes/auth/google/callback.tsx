@@ -87,8 +87,15 @@ function GoogleCallbackPage() {
       const result = await handleGoogleAuthCallbackFn({ data: { code, userId: user.id } });
 
       if (result.success) {
-        // Save connection metadata locally (no tokens — just email + status)
-        const conn = await googleDriveService.saveConnection(user.id, result.email ?? "unknown");
+        // Save connection metadata locally alongside persistent tokens
+        const conn = await googleDriveService.saveConnection(
+          user.id,
+          result.email ?? "unknown",
+          result.access_token,
+          result.refresh_token,
+          result.token_expiry,
+          result.scope
+        );
         setStatus("success");
         toast.success("Google Drive connected successfully!", {
           description: `Connected as ${conn.google_account_email}`,

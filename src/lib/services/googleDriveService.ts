@@ -20,7 +20,7 @@ function simpleHash(str: string): string {
 
 export const googleDriveService = {
 
-  async saveConnection(userId: string, email: string): Promise<GoogleDriveConnection> {
+  async saveConnection(userId: string, email: string, accessToken?: string, refreshToken?: string, expiry?: string, scopes?: string): Promise<GoogleDriveConnection> {
     const now = new Date().toISOString();
     const userObj = getDb().users.find((u) => u.id === userId);
 
@@ -29,10 +29,10 @@ export const googleDriveService = {
       company_id: userObj?.company_id ?? "",
       user_id: userId,
       google_account_email: email,
-      encrypted_access_token: null,
-      encrypted_refresh_token: null,
-      expiry: null,
-      scopes: null,
+      encrypted_access_token: accessToken || null,
+      encrypted_refresh_token: refreshToken || null,
+      expiry: expiry || null,
+      scopes: scopes || null,
       selected_folder_id: null,
       selected_folder_name: null,
       status: "connected",

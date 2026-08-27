@@ -137,15 +137,14 @@ export const handleGoogleAuthCallbackFn = createServerFn({ method: "POST" })
             const userInfo = (await userInfoRes.json()) as { email?: string };
             const email = userInfo.email ?? "unknown";
 
-            tokenStore.set(userId, {
+            return {
+                success: true as const,
+                email,
                 access_token: tokens.access_token,
                 refresh_token: tokens.refresh_token ?? "",
                 token_expiry: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-                email,
-                scope: tokens.scope,
-            });
-
-            return { success: true as const, email };
+                scope: tokens.scope
+            };
         } catch {
             return { success: false as const, error: "Server OAuth callback failed." };
         }
@@ -161,9 +160,9 @@ export const disconnectGoogleDriveFn = createServerFn({ method: "POST" })
 
 /** List Google Drive folders. */
 export const listGoogleFoldersFn = createServerFn({ method: "POST" })
-    .validator((data: { userId: string }) => data)
+    .validator((data: { userId: string; accessToken: string }) => data)
     .handler(async ({ data }): Promise<{ folders: DriveFolder[] }> => {
-        const token = await getValidToken(data.userId);
+        const token = data.accessToken;
         if (!token) return { folders: [] };
 
         try {
@@ -185,9 +184,9 @@ export const listGoogleFoldersFn = createServerFn({ method: "POST" })
 
 /** List Excel/Sheets files in a specific folder. */
 export const listGoogleFilesInFolderFn = createServerFn({ method: "POST" })
-    .validator((data: { userId: string; folderId: string }) => data)
+    .validator((data: { userId: string; folderId: string; accessToken: string }) => data)
     .handler(async ({ data }): Promise<{ files: DriveFile[] }> => {
-        const token = await getValidToken(data.userId);
+        const token = data.accessToken;
         if (!token) return { files: [] };
 
         try {
@@ -214,7 +213,7 @@ export const listGoogleFilesInFolderFn = createServerFn({ method: "POST" })
 
 /** Download a Google Drive file and return it as base64. */
 export const downloadGoogleFileFn = createServerFn({ method: "POST" })
-    .validator((data: { userId: string; fileId: string; mimeType: string }) => data)
+    .validator((data: { userId: string; fileId: string; mimeType: string; accessToken: string }) => data)
     .handler(
         async ({
             data,
@@ -224,7 +223,7 @@ export const downloadGoogleFileFn = createServerFn({ method: "POST" })
             base64Data?: string;
             modifiedTime?: string;
         }> => {
-            const token = await getValidToken(data.userId);
+            const token = data.accessToken;
             if (!token) return { success: false, error: "No valid server token" };
 
             try {
