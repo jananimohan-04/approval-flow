@@ -66,14 +66,19 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     if (!fileData) throw new Error(`Data source not found for reference: ${query.dataSourceId}`);
     const fileName = fileData.file_name || "Unknown File";
 
-    // 2. Fetch connection credentials bypassing user trust for server-executed Drive stream
+    // 2. Fetch connection credentials securely for the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Unauthenticated AI invocation.");
+
     const { data: conns } = await supabase.from('google_drive_connections')
         .select('user_id, encrypted_access_token')
+        .eq('user_id', user.id)
+        .not('encrypted_access_token', 'is', null)
         .limit(1);
 
     const conn = conns && conns.length > 0 ? conns[0] : null;
 
-    if (!conn || !conn.encrypted_access_token) throw new Error("No connected Drive account for this company.");
+    if (!conn || !conn.encrypted_access_token) throw new Error("No connected Drive account with valid tokens found.");
 
     const token = conn.encrypted_access_token;
 
