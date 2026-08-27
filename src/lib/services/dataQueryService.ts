@@ -67,8 +67,11 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     const fileName = fileData.file_name || "Unknown File";
 
     // 2. Fetch connection credentials securely for the current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthenticated AI invocation.");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
+    if (!user || userError) {
+        console.error("Auth User Error:", userError);
+        throw new Error("Unauthenticated AI invocation.");
+    }
 
     const { data: conns } = await supabase.from('google_drive_connections')
         .select('user_id, encrypted_access_token')
