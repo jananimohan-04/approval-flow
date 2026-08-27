@@ -13,7 +13,7 @@ export const classifyRowFn = createServerFn({ method: "POST" })
     }) => data)
     .handler(async ({ data }) => {
         try {
-            const apiKey = process.env["OPENAI_API_KEY"];
+            const apiKey = process.env["OPENAI_API_KEY"] || (import.meta as any).env?.OPENAI_API_KEY || (import.meta as any).env?.VITE_OPENAI_API_KEY;
             if (!apiKey) {
                 throw new Error("AI provider API key is not configured.");
             }
@@ -96,7 +96,7 @@ export const answerQuestionFn = createServerFn({ method: "POST" })
     }) => data)
     .handler(async ({ data }) => {
         try {
-            const apiKey = process.env["OPENAI_API_KEY"];
+            const apiKey = process.env["OPENAI_API_KEY"] || (import.meta as any).env?.OPENAI_API_KEY || (import.meta as any).env?.VITE_OPENAI_API_KEY;
             if (!apiKey) throw new Error("AI provider API key is not configured.");
 
             const supabase = getSecureServerSupabase(data.accessToken);
