@@ -102,21 +102,17 @@ export const answerQuestionFn = createServerFn({ method: "POST" })
             const supabase = getSecureServerSupabase(data.accessToken);
 
             // 1. Fetch secure accessible schema maps based on authenticated user RLS
-            const { data: sources } = await supabase.from("data_sources").select("id, file_name, row_count");
+            const { data: sources } = await supabase.from("data_sources").select("id, file_name, row_count, schema_snapshot");
             if (!sources || sources.length === 0) {
                 return { answer: "I couldn't find any connected data sources you have access to.", sources: [] } as QAAnswer;
             }
 
             let schemaSummary = "Available Data Sources:\n";
             for (const src of sources) {
-                schemaSummary += `- [ID: ${src.id}] ${src.file_name} (${src.row_count || 0} total updates)\n`;
-                // Fetch up to 1 row simply to isolate unique header columns explicitly without retrieving full dataset
-                const { data: probe } = await supabase.from("data_source_rows").select("sheet_name, row_data").eq("data_source_id", src.id).limit(10);
-                if (probe && probe.length > 0) {
-                    const sheets = [...new Set(probe.map(p => p.sheet_name))];
-                    for (const s of sheets) {
-                        const sampleRow = probe.find(p => p.sheet_name === s)?.row_data || {};
-                        schemaSummary += `   -> Sheet: "${s}", Columns: [${Object.keys(sampleRow).join(", ")}]\n`;
+                schemaSummary += `- [ID: ${src.id}] ${src.file_name}\n`;
+                if (src.schema_snapshot) {
+                    for (const [sheet, cols] of Object.entries(src.schema_snapshot as Record<string, string[]>)) {
+                        schemaSummary += `   -> Sheet: "${sheet}", Columns: [${(cols).join(", ")}]\n`;
                     }
                 }
             }

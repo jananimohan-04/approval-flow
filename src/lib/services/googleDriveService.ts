@@ -22,8 +22,11 @@ export const googleDriveService = {
 
   async saveConnection(userId: string, email: string): Promise<GoogleDriveConnection> {
     const now = new Date().toISOString();
+    const userObj = getDb().users.find((u) => u.id === userId);
+
     const conn: GoogleDriveConnection = {
       id: uid("gdc"),
+      company_id: userObj?.company_id ?? "",
       user_id: userId,
       google_account_email: email,
       encrypted_access_token: null,
@@ -126,6 +129,7 @@ export const googleDriveService = {
         last_synced_at: null,
         row_count: 0,
         sync_status: "pending",
+        schema_snapshot: {},
         created_at: now,
         updated_at: now,
       };
@@ -207,13 +211,12 @@ export const googleDriveService = {
       );
 
       if (!existingRow) {
-        const newRow: DataSourceRow = {
+        const newRow = {
           id: uid("dfr"),
           data_source_id: monitoredFile.id,
           sheet_name: sheetName,
           row_key: rowKey,
           row_hash: rowHash,
-          row_data: row,
           first_seen_at: now,
           last_seen_at: now,
           updated_at: now,
@@ -223,7 +226,6 @@ export const googleDriveService = {
       } else if (existingRow.row_hash !== rowHash) {
         await dataSourceService.update("data_source_rows", existingRow.id, {
           row_hash: rowHash,
-          row_data: row,
           last_seen_at: now,
           updated_at: now,
         });

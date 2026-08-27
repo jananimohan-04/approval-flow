@@ -47,7 +47,7 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     // 1. Resolve file name for context
     const { data: fileData } = await supabase
         .from("data_sources")
-        .select("file_name, company_id, mime_type")
+        .select("file_name, company_id, mime_type, google_file_id")
         .eq("id", query.dataSourceId)
         .single();
 
@@ -66,8 +66,8 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     const token = await getValidToken(conn.user_id);
 
     const downloadUrl = fileData.mime_type === "application/vnd.google-apps.spreadsheet"
-        ? `https://www.googleapis.com/drive/v3/files/${query.dataSourceId}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
-        : `https://www.googleapis.com/drive/v3/files/${query.dataSourceId}?alt=media`;
+        ? `https://www.googleapis.com/drive/v3/files/${fileData.google_file_id}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+        : `https://www.googleapis.com/drive/v3/files/${fileData.google_file_id}?alt=media`;
 
     const dlRes = await fetch(downloadUrl, { headers: { Authorization: `Bearer ${token}` } });
     if (!dlRes.ok) throw new Error("Failed to read required data from connected Google Drive.");

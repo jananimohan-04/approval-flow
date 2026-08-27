@@ -165,16 +165,21 @@ function DataSourcesPage() {
                 const XLSX = await import("xlsx");
                 const workbook = XLSX.read(bytes, { type: "array" });
 
+                const schemaSnapshot: Record<string, string[]> = {};
                 for (const sheetName of workbook.SheetNames) {
                     const sheet = workbook.Sheets[sheetName];
                     if (!sheet) continue;
                     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { blankrows: false, defval: "" });
+                    if (rows.length > 0) {
+                        schemaSnapshot[sheetName] = Object.keys(rows[0] as object);
+                    }
                     googleDriveService.processRows(file, sheetName, rows, user.id);
                 }
 
                 dataSourceService.update("data_sources", file.id, {
                     last_modified_at: dlRes.modifiedTime ?? null,
                     updated_at: now,
+                    schema_snapshot: schemaSnapshot,
                 });
                 processed++;
             } catch (err) {
