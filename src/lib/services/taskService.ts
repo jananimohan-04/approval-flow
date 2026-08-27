@@ -7,26 +7,6 @@ import { classifyRowFn } from "./aiFunctions";
 import type { AppTask, TaskPriority, TaskStatus, AiRule } from "../types";
 
 export const taskService = {
-  checkAdminRules(row: Record<string, unknown>, sourceFileName: string, sheetName: string, companyId: string): AiRule | null {
-    const rules = getDb().ai_rules.filter(r => r.is_active && r.company_id === companyId);
-
-    // Sort by rule order ascending
-    rules.sort((a, b) => a.rule_order - b.rule_order);
-
-    const valuesStr = Object.values(row).map(v => String(v)).join(" ").toLowerCase();
-    const headersStr = Object.keys(row).join(" ").toLowerCase();
-    const searchString = `${sourceFileName} ${sheetName} ${headersStr} ${valuesStr}`.toLowerCase();
-
-    for (const rule of rules) {
-      if (!rule.keywords || rule.keywords.length === 0) continue;
-      for (const kw of rule.keywords) {
-        if (searchString.includes(kw.trim().toLowerCase())) {
-          return rule;
-        }
-      }
-    }
-    return null;
-  },
 
   async evaluateAndCreateTask(params: {
     source: string;
@@ -38,72 +18,37 @@ export const taskService = {
     created_by: string;
     company_id: string;
   }): Promise<AppTask | null> {
-    const explicitRule = this.checkAdminRules(params.row, params.source, params.sheet, params.company_id);
+
+    // Fetch all prompt instructions strictly scoped to this company
+    const rules = getDb().ai_rules.filter(r => r.is_active && r.company_id === params.company_id);
+    const customPrompts = rules.map(r => r.prompt_instruction);
+
+    const deptNames = getDb().departments.filter(d => d.active).map(d => d.name);
+
+    const aiDecision = await classifyRowFn({
+      data: {
+        source: params.source,
+        sheet: params.sheet,
+        columns: params.columns,
+        row: params.row,
+        departments: deptNames,
+        customPrompts: customPrompts,
+      }
+    });
+
+    if (!aiDecision.is_actionable) return null;
 
     let department_id: string | null = null;
-    let priority: TaskPriority = "medium";
-    let aiClassified = false;
-    let aiConfidence = 1.0;
-    let task_title = "Data update";
-    let task_description = `Auto-imported details from ${params.source} (${params.sheet}).\n\nRow Details: \n${JSON.stringify(params.row, null, 2)}`;
-    let is_actionable = true;
+    const matchDept = getDb().departments.find(d => d.name.toLowerCase() === aiDecision.department.toLowerCase());
+    department_id = matchDept ? matchDept.id : null;
+    if (aiDecision.confidence < 0.70) department_id = null;
 
-    if (explicitRule) {
-      if (explicitRule.task_action === "ignore") return null;
-
-      if (explicitRule.task_action === "manual_review") {
-        department_id = null;
-        priority = explicitRule.priority;
-      } else {
-        department_id = explicitRule.target_department_id;
-        priority = explicitRule.priority;
-      }
-    } else {
-      aiClassified = true;
-      const deptNames = getDb().departments.filter(d => d.active).map(d => d.name);
-      const ruleContext = getDb().ai_rules.filter(r => r.is_active && r.company_id === params.company_id).map(r => ({
-        keyword: r.keywords.join(", "),
-        department: getDb().departments.find(d => d.id === r.target_department_id)?.name || "Unknown",
-        priority: r.priority
-      }));
-
-      const aiDecision = await classifyRowFn({
-        data: {
-          source: params.source,
-          sheet: params.sheet,
-          columns: params.columns,
-          row: params.row,
-          departments: deptNames,
-          rules: ruleContext,
-        }
-      });
-
-      if (!aiDecision.is_actionable) {
-        return null; // Ignore noisy rows securely!
-      }
-
-      const matchDept = getDb().departments.find(d => d.name.toLowerCase() === aiDecision.department.toLowerCase());
-
-      department_id = matchDept ? matchDept.id : null; // Fallback to unclassified if invalid or threshold
-
-      // Threshold checking dynamically overrides
-      if (aiDecision.confidence < 0.70) {
-        department_id = null; // Forces unclassified review queue
-      }
-
-      priority = (aiDecision.priority === "critical" ? "urgent" : aiDecision.priority) as TaskPriority;
-      aiConfidence = aiDecision.confidence;
-      task_title = aiDecision.task_title;
-      task_description = aiDecision.task_description;
-    }
-
+    const priority: TaskPriority = (aiDecision.priority === "critical" ? "urgent" : (aiDecision.priority as TaskPriority));
+    const task_title = aiDecision.task_title;
+    const task_description = aiDecision.task_description;
     const taskId = uid("tsk");
-
-    // Inject rule metadata if applicable
-    const ai_classification = explicitRule ? false : true;
-    const ai_confidence = explicitRule ? 1.0 : aiConfidence;
-
-    // Use current session fallback OR explicit params.company_id to isolate perfectly!
+    const ai_classification = true;
+    const ai_confidence = aiDecision.confidence;
     const company_id = params.company_id || getDb().users.find(u => u.id === params.created_by)?.company_id || "demo";
 
     // Auto-assignment behavior mapping
@@ -204,7 +149,7 @@ export const taskService = {
         columns: ["Body"],
         row: { Body: emailContent },
         departments: getDb().departments.filter(d => d.active).map(d => d.name),
-        rules: []
+        customPrompts: []
       }
     });
 
@@ -246,7 +191,7 @@ export const taskService = {
     return newTask;
   },
 
-  // Legacy createTask mapping for internal system updates retaining backward compat
+  // Legacy createTask mapping
   async createTask(params: {
     title: string;
     description: string;
@@ -279,7 +224,6 @@ export const taskService = {
     };
 
     const saved = await dataSourceService.insert("tasks", task) as AppTask;
-    realtime.publish({ type: "task.created", task: saved });
     return saved;
   },
 

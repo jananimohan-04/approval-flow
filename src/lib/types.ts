@@ -65,12 +65,7 @@ export interface AiRule {
   id: string;
   company_id: string;
   name: string;
-  description: string | null;
-  keywords: string[];
-  target_department_id: string;
-  priority: TaskPriority;
-  task_action: "create_task" | "ignore" | "manual_review";
-  rule_order: number;
+  prompt_instruction: string;
   is_active: boolean;
   created_by: string | null;
   created_at: string;

@@ -9,7 +9,7 @@ export const classifyRowFn = createServerFn({ method: "POST" })
         columns: string[];
         row: Record<string, unknown>;
         departments: string[];
-        rules: { keyword: string; department: string; priority: string }[];
+        customPrompts?: string[];
     }) => data)
     .handler(async ({ data }) => {
         try {
@@ -17,6 +17,10 @@ export const classifyRowFn = createServerFn({ method: "POST" })
             if (!apiKey) {
                 throw new Error("AI provider API key is not configured.");
             }
+
+            const customInstructionStr = data.customPrompts && data.customPrompts.length > 0
+                ? `\n\n=== CUSTOM TARGET INSTRUCTIONS ===\nThe Admin has provided you with the following strict rules. You MUST obey these instructions above all default behavior:\n${data.customPrompts.map(p => `- ${p}`).join("\n")}`
+                : "";
 
             const response = await fetch("https://api.openai.com/v1/chat/completions", {
                 method: "POST",
@@ -31,22 +35,17 @@ export const classifyRowFn = createServerFn({ method: "POST" })
                     messages: [
                         {
                             role: "system",
-                            content: `You are an AI task classification engine for Nexus AI Operations Assistant.
-Your job is to analyze new spreadsheet rows and determine if they require human attention, and route them to one of the configured departments.
-Return ONLY valid JSON with no markdown formatting.
-Schema:
-{
-  "department": "string" | "unclassified",
-  "is_actionable": boolean,
-  "task_title": "string",
-  "task_description": "string",
-  "priority": "low" | "medium" | "high" | "critical",
-  "confidence": number
-}
+                            content: `You are an AI tasked with evaluating a row of data imported from a spreadsheet (${data.source} - ${data.sheet}).
+Analyze the payload. Decide if this row requires actionable work (e.g. follow-up, approval, data entry). If it's a completely empty, junk, or non-actionable header row, set is_actionable=false.
+If actionable, classify it into EXACTLY ONE of the provided departments.
+Provide a clear task_title and a short task_description summarizing what needs to be done.
+Estimate confidence (0.0 to 1.0).
+Determine priority ('low', 'medium', 'high', 'critical').
 
-Rules for actionability:
-- Routine updates with no obvious next step are NOT actionable.
-- Items explicitly marked 'Pending', 'Action Required', 'Failed', or business flows needing review ARE actionable.`,
+Available Departments:
+${data.departments.join("\n")}${customInstructionStr}
+
+Return the structured JSON classification. Note: Ensure department matches exactly from available list or is 'unclassified'.`,
                         },
                         {
                             role: "user",
@@ -58,9 +57,6 @@ ${JSON.stringify(data.row, null, 2)}
 
 Available Departments:
 ${data.departments.join("\n")}
-
-Admin AI Configuration Rules:
-${data.rules.map((r) => `- Keywords [${r.keyword}] => ${r.department} (Priority: ${r.priority})`).join("\n")}
 
 Return the structured JSON classification. Note: Ensure department matches exactly from available list or is 'unclassified'.`,
                         },
