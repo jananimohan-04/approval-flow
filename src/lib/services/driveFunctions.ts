@@ -84,11 +84,11 @@ async function driveGet(token: string, url: string): Promise<Response> {
  * comes from env, not the frontend).
  */
 export const getAuthUrlFn = createServerFn({ method: "POST" })
-    .validator((data: { stateToken: string }) => data)
+    .validator((data: { stateToken: string, customRedirect?: string }) => data)
     .handler(async ({ data }) => {
         const params = new URLSearchParams({
             client_id: getClientId(),
-            redirect_uri: getRedirectUri(),
+            redirect_uri: data.customRedirect || getRedirectUri(),
             response_type: "code",
             scope: "https://www.googleapis.com/auth/drive.readonly email profile",
             access_type: "offline",
@@ -103,7 +103,7 @@ export const getAuthUrlFn = createServerFn({ method: "POST" })
  * Returns only the Google account email — tokens stay in server memory.
  */
 export const handleGoogleAuthCallbackFn = createServerFn({ method: "POST" })
-    .validator((data: { code: string; userId: string }) => data)
+    .validator((data: { code: string; userId: string; customRedirect?: string }) => data)
     .handler(async ({ data }) => {
         try {
             const { code, userId } = data;
@@ -115,7 +115,7 @@ export const handleGoogleAuthCallbackFn = createServerFn({ method: "POST" })
                     code,
                     client_id: getClientId(),
                     client_secret: getClientSecret(),
-                    redirect_uri: getRedirectUri(),
+                    redirect_uri: data.customRedirect || getRedirectUri(),
                     grant_type: "authorization_code",
                 }),
             });

@@ -47,7 +47,8 @@ function DataSourcesPage() {
     const handleConnect = async () => {
         const state = uid("state");
         sessionStorage.setItem("google_oauth_state", state);
-        const result = await getAuthUrlFn({ data: { stateToken: state } });
+        const redirectUrl = window.location.origin + "/auth/google/callback";
+        const result = await getAuthUrlFn({ data: { stateToken: state, customRedirect: redirectUrl } });
         window.location.href = result.url;
     };
 

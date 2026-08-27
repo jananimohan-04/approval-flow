@@ -84,7 +84,10 @@ function GoogleCallbackPage() {
       sessionStorage.removeItem("google_oauth_state");
 
       // Exchange code for tokens on the server (secret never reaches browser)
-      const result = await handleGoogleAuthCallbackFn({ data: { code, userId: user.id } });
+      const redirectUrl = window.location.origin + "/auth/google/callback";
+      const result = await handleGoogleAuthCallbackFn({
+        data: { code, userId: user.id, customRedirect: redirectUrl }
+      });
 
       if (result.success) {
         // Save connection metadata locally alongside persistent tokens
