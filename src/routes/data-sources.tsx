@@ -154,9 +154,18 @@ function DataSourcesPage() {
                     continue;
                 }
 
-                if (file.last_modified_at && dlRes.modifiedTime! <= file.last_modified_at) {
+                // Bypass date check if it's the very first sync (sync_status strictly pending)
+                const isFirstSync = file.sync_status === "pending";
+
+                if (!isFirstSync && file.last_modified_at && dlRes.modifiedTime! <= file.last_modified_at) {
                     continue;
                 }
+
+                // If we get here, it's either first sync or actually modified. Update timestamp.
+                dataSourceService.update("data_sources", file.id, {
+                    last_modified_at: dlRes.modifiedTime ?? null,
+                    sync_status: "synced"
+                });
 
                 const binaryString = window.atob(dlRes.base64Data!);
                 const len = binaryString.length;

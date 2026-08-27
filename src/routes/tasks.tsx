@@ -104,7 +104,7 @@ function TasksPage() {
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await taskService.createTask({
+            const params: any = {
                 title: createForm.title,
                 description: createForm.description,
                 source_file_id: null,
@@ -112,8 +112,11 @@ function TasksPage() {
                 source_sheet_name: null,
                 source_row_key: null,
                 created_by: user.id,
-                explicit_department_id: createForm.department_id || undefined,
-            });
+            };
+            if (createForm.department_id) {
+                params.explicit_department_id = createForm.department_id;
+            }
+            await taskService.createTask(params);
             // Re-assign logic will happen via manual reassign or we could pass assigneUser
             toast.success("Task created manually");
             setIsCreateOpen(false);
