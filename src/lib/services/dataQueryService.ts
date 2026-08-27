@@ -87,7 +87,12 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     const buffer = await dlRes.arrayBuffer();
     const XLSX = await import("xlsx");
     const workbook = XLSX.read(buffer, { type: "array" });
-    const sheet = workbook.Sheets[query.sheetName];
+
+    // Case-insensitive sheet matching to handle AI hallucinated casings
+    const sheetKey = Object.keys(workbook.Sheets).find(
+        k => k.trim().toLowerCase() === query.sheetName.trim().toLowerCase()
+    );
+    const sheet = sheetKey ? workbook.Sheets[sheetKey] : null;
 
     let allRows: any[] = [];
     if (sheet) {
