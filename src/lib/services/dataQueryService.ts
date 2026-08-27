@@ -45,13 +45,25 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     const supabase = getSecureServerSupabase(accessToken);
 
     // 1. Resolve file name for context
-    const { data: fileData } = await supabase
+    let fileData = null;
+    const { data: byId } = await supabase
         .from("data_sources")
         .select("file_name, company_id, mime_type, google_file_id")
         .eq("id", query.dataSourceId)
-        .single();
+        .maybeSingle();
 
-    if (!fileData) throw new Error("Data source not found.");
+    if (byId) {
+        fileData = byId;
+    } else {
+        const { data: byName } = await supabase
+            .from("data_sources")
+            .select("file_name, company_id, mime_type, google_file_id")
+            .ilike("file_name", `%${query.dataSourceId}%`)
+            .limit(1);
+        if (byName && byName.length > 0) fileData = byName[0];
+    }
+
+    if (!fileData) throw new Error(`Data source not found for reference: ${query.dataSourceId}`);
     const fileName = fileData.file_name || "Unknown File";
 
     // 2. Fetch connection credentials bypassing user trust for server-executed Drive stream
@@ -84,12 +96,18 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
 
     // 3. Apply deterministic filtering in application code
     const filtered = allRows.filter(row => {
+        const lowerRow: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(row)) {
+            lowerRow[k.trim().toLowerCase()] = v;
+        }
+
         for (const f of query.filters) {
-            const val = row[f.column];
+            const searchCol = f.column.trim().toLowerCase();
+            const val = lowerRow[searchCol];
             if (val === undefined || val === null) return false;
 
-            const strVal = String(val).toLowerCase();
-            const strFilter = String(f.value).toLowerCase();
+            const strVal = String(val).toLowerCase().trim();
+            const strFilter = String(f.value).toLowerCase().trim();
             const numVal = parseFloat(String(val).replace(/[^0-9.-]+/g, ""));
             const numFilter = parseFloat(String(f.value));
 
@@ -120,9 +138,13 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
         if (!query.targetColumn) {
             finalResult = "Error: targetColumn required for math operations.";
         } else {
-            const targetCol = query.targetColumn; // explicit bound 
+            const targetCol = query.targetColumn.trim().toLowerCase();
             const nums = filtered.map((r: any) => {
-                const v = parseFloat(String(r[targetCol]).replace(/[^0-9.-]+/g, ""));
+                const lowerR: Record<string, unknown> = {};
+                for (const [k, v] of Object.entries(r)) {
+                    lowerR[k.trim().toLowerCase()] = v;
+                }
+                const v = parseFloat(String(lowerR[targetCol]).replace(/[^0-9.-]+/g, ""));
                 return isNaN(v) ? 0 : v;
             });
 
