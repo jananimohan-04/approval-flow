@@ -2,7 +2,7 @@ import { getDb, mutate } from "../store";
 import type { Database } from "../types";
 import { supabase } from "../supabase";
 
-export type TableName = Exclude<keyof Database, "session_user_id">;
+export type TableName = keyof Omit<Database, "session_user_id" | "session_initialized">;
 
 export interface DataSource {
   readonly name: string;

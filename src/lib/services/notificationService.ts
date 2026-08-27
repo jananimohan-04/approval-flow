@@ -13,15 +13,17 @@ const DEFAULT_SETTINGS: UserSettings = { voice_enabled: true, voice_language: "e
 
 export const notificationService = {
   async create(input: {
-    user_id: string;
+    user_id: string | null;
     title: string;
     message: string;
     type: string;
     department_id?: string | null;
     task_id?: string | null;
+    company_id: string;
   }): Promise<AppNotification> {
     const notification: AppNotification = {
       id: uid("n"),
+      company_id: input.company_id,
       user_id: input.user_id,
       department_id: input.department_id ?? null,
       task_id: input.task_id ?? null,
@@ -33,7 +35,7 @@ export const notificationService = {
     };
     await dataSourceService.insert("notifications", notification);
     activityService.log({
-      user_id: input.user_id,
+      user_id: input.user_id || "system",
       action: "notification.created",
       entity_type: "notification",
       entity_id: notification.id,

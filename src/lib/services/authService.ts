@@ -1,12 +1,12 @@
 import { dataSourceService } from "../data/dataSource";
 import { getDb, mutate } from "../store";
-import type { User } from "../types";
+import type { AppUser, AppRole } from "../types";
 import { activityService } from "./activityService";
 import { supabase } from "../supabase";
 import { toast } from "sonner";
 
 export const authService = {
-  async signIn(email: string, password: string): Promise<{ user?: User; error?: string }> {
+  async signIn(email: string, password: string): Promise<{ user?: AppUser; error?: string }> {
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -66,7 +66,7 @@ export const authService = {
     mutate((db) => ({ ...db, session_user_id: null }));
   },
 
-  currentUser(): User | null {
+  currentUser(): AppUser | null {
     const db = getDb();
     if (!db.session_user_id) return null;
     return db.users.find((u) => u.id === db.session_user_id) ?? null;

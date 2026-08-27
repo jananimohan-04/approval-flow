@@ -4,21 +4,24 @@ import { activityService } from "./activityService";
 import { notificationService } from "./notificationService";
 import { realtime } from "./realtime";
 import { classifyRowFn } from "./aiFunctions";
-import type { AppTask, TaskPriority, TaskStatus, AiRule, User } from "../types";
+import type { AppTask, TaskPriority, TaskStatus, AiRule } from "../types";
 
 export const taskService = {
-  checkAdminRules(searchString: string, sourceFileName: string): { department_id: string; priority: TaskPriority; confidence: number } | null {
-    const rules = getDb().ai_rules.filter(r => r.active);
-    const normalized = searchString.toLowerCase();
+  checkAdminRules(row: Record<string, unknown>, sourceFileName: string, sheetName: string, companyId: string): AiRule | null {
+    const rules = getDb().ai_rules.filter(r => r.is_active && r.company_id === companyId);
+
+    // Sort by rule order ascending
+    rules.sort((a, b) => a.rule_order - b.rule_order);
+
+    const valuesStr = Object.values(row).map(v => String(v)).join(" ").toLowerCase();
+    const headersStr = Object.keys(row).join(" ").toLowerCase();
+    const searchString = `${sourceFileName} ${sheetName} ${headersStr} ${valuesStr}`.toLowerCase();
 
     for (const rule of rules) {
-      if (rule.source_conditions && sourceFileName.includes(rule.source_conditions)) {
-        return { department_id: rule.target_department_id!, priority: rule.priority, confidence: 1.0 };
-      }
-      const keywords = rule.keywords.split(",").map(k => k.trim().toLowerCase()).filter(Boolean);
-      for (const kw of keywords) {
-        if (normalized.includes(kw)) {
-          return { department_id: rule.target_department_id!, priority: rule.priority, confidence: 1.0 };
+      if (!rule.keywords || rule.keywords.length === 0) continue;
+      for (const kw of rule.keywords) {
+        if (searchString.includes(kw.trim().toLowerCase())) {
+          return rule;
         }
       }
     }
@@ -33,8 +36,9 @@ export const taskService = {
     source_file_id: string | null;
     source_row_key: string | null;
     created_by: string;
+    company_id: string;
   }): Promise<AppTask | null> {
-    const explicitRule = this.checkAdminRules(JSON.stringify(params.row), params.source);
+    const explicitRule = this.checkAdminRules(params.row, params.source, params.sheet, params.company_id);
 
     let department_id: string | null = null;
     let priority: TaskPriority = "medium";
@@ -45,14 +49,20 @@ export const taskService = {
     let is_actionable = true;
 
     if (explicitRule) {
-      // Rule matched implicitly actionable and routed
-      department_id = explicitRule.department_id;
-      priority = explicitRule.priority;
+      if (explicitRule.task_action === "ignore") return null;
+
+      if (explicitRule.task_action === "manual_review") {
+        department_id = null;
+        priority = explicitRule.priority;
+      } else {
+        department_id = explicitRule.target_department_id;
+        priority = explicitRule.priority;
+      }
     } else {
       aiClassified = true;
       const deptNames = getDb().departments.filter(d => d.active).map(d => d.name);
-      const ruleContext = getDb().ai_rules.filter(r => r.active).map(r => ({
-        keyword: r.keywords,
+      const ruleContext = getDb().ai_rules.filter(r => r.is_active && r.company_id === params.company_id).map(r => ({
+        keyword: r.keywords.join(", "),
         department: getDb().departments.find(d => d.id === r.target_department_id)?.name || "Unknown",
         priority: r.priority
       }));
@@ -89,77 +99,151 @@ export const taskService = {
 
     const taskId = uid("tsk");
 
+    // Inject rule metadata if applicable
+    const ai_classification = explicitRule ? false : true;
+    const ai_confidence = explicitRule ? 1.0 : aiConfidence;
+
+    // Use current session fallback OR explicit params.company_id to isolate perfectly!
+    const company_id = params.company_id || getDb().users.find(u => u.id === params.created_by)?.company_id || "demo";
+
     // Auto-assignment behavior mapping
     let assigned_user_id: string | null = null;
     if (department_id) {
-      const activeUsers = getDb().users.filter(u => u.active && u.department_id === department_id);
+      const activeUsers = getDb().users.filter(u => u.active && u.department_id === department_id && u.company_id === company_id);
       if (activeUsers.length === 1) {
         assigned_user_id = activeUsers[0]!.id;
       } else if (activeUsers.length > 1) {
         // Assign to least loaded stringently
         const deptTasks = getDb().tasks.filter(t => t.department_id === department_id && (t.status === "in_progress" || t.status === "pending"));
-        const userLoad = activeUsers.map(u => ({ id: u.id, load: deptTasks.filter(t => t.assigned_user_id === u.id).length }));
-        userLoad.sort((a, b) => a.load - b.load);
-        assigned_user_id = userLoad[0]!.id;
+        const loadMap = new Map<string, number>();
+        activeUsers.forEach(u => loadMap.set(u.id, 0));
+        deptTasks.forEach(t => {
+          if (t.assigned_user_id && loadMap.has(t.assigned_user_id)) {
+            loadMap.set(t.assigned_user_id, loadMap.get(t.assigned_user_id)! + 1);
+          }
+        });
+
+        let minUser = activeUsers[0]!.id;
+        let minLoad = loadMap.get(minUser)!;
+        for (const [uid, load] of loadMap.entries()) {
+          if (load < minLoad) {
+            minLoad = load;
+            minUser = uid;
+          }
+        }
+        assigned_user_id = minUser;
       }
     }
 
-    const task: AppTask = {
+    const newTask: AppTask = {
       id: taskId,
+      company_id,
       title: task_title,
       description: task_description,
       source_file_id: params.source_file_id,
       source_file_name: params.source,
       source_sheet_name: params.sheet,
       source_row_key: params.source_row_key,
-      department_id: department_id,
+      department_id,
       assigned_user_id,
       priority,
       status: assigned_user_id ? "pending" : "unassigned",
-      ai_classification: aiClassified,
-      ai_confidence: aiConfidence,
       created_by: params.created_by,
+      ai_classification,
+      ai_confidence,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       completed_at: null,
     };
 
-    const saved = await dataSourceService.insert("tasks", task) as AppTask;
+    await dataSourceService.insert("tasks", newTask);
 
-    await activityService.log({
-      user_id: params.created_by === "system" ? null : params.created_by,
-      action: "task.created",
-      entity_type: "task",
-      entity_id: saved.id,
-      description: `Task created: ${saved.title}`,
-    });
-
-    realtime.publish({ type: "task.created", task: saved });
-
+    // Notify assignee if determined
     if (assigned_user_id) {
       await notificationService.create({
         user_id: assigned_user_id,
-        department_id: department_id,
+        department_id: null,
+        task_id: taskId,
+        title: "New AI Task Assigned",
+        message: `You have been automatically assigned: ${task_title}`,
         type: "task_assigned",
-        title: "New Task Assigned to You",
-        message: `A new AI routed task "${saved.title}" requires your attention.`,
-        task_id: saved.id,
+        company_id
       });
     } else if (department_id) {
-      const deptUsers = getDb().users.filter((u) => u.department_id === department_id && u.active);
-      for (const u of deptUsers) {
-        await notificationService.create({
-          user_id: u.id,
-          department_id: department_id,
-          type: "task_assigned",
-          title: "New Department Task",
-          message: `A new task in your queue requires assignment.`,
-          task_id: saved.id,
-        });
-      }
+      // Notify department
+      await notificationService.create({
+        user_id: null,
+        department_id,
+        task_id: taskId,
+        title: "New Unassigned Task",
+        message: `A new task requires assignment in your department: ${task_title}`,
+        type: "task_assigned",
+        company_id
+      });
+    } else {
+      // Notify admins
+      await notificationService.create({
+        user_id: null,
+        department_id: null,
+        task_id: taskId,
+        title: "Unclassified Task",
+        message: `AI Confidence too low OR configured for Manual Review. Please review: ${task_title}`,
+        type: "system_alert",
+        company_id
+      });
     }
 
-    return saved;
+    return newTask;
+  },
+
+  async classifyEmailContent(emailContent: string, createdBy: string, company_id: string): Promise<AppTask | null> {
+    const aiDecision = await classifyRowFn({
+      data: {
+        source: "Email Inbox",
+        sheet: "Inbound",
+        columns: ["Body"],
+        row: { Body: emailContent },
+        departments: getDb().departments.filter(d => d.active).map(d => d.name),
+        rules: []
+      }
+    });
+
+    if (!aiDecision.is_actionable) return null;
+
+    const matchDept = getDb().departments.find(d => d.name.toLowerCase() === aiDecision.department.toLowerCase());
+    let department_id = matchDept ? matchDept.id : null;
+    if (aiDecision.confidence < 0.70) department_id = null;
+
+    const taskId = uid("tsk");
+    let assigned_user_id: string | null = null;
+    if (department_id) {
+      const activeUsers = getDb().users.filter(u => u.active && u.department_id === department_id && u.company_id === company_id);
+      if (activeUsers.length === 1) assigned_user_id = activeUsers[0]!.id;
+    }
+
+    const newTask: AppTask = {
+      id: taskId,
+      company_id,
+      title: aiDecision.task_title,
+      description: `Inbound Email:\n\n${emailContent}\n\nAI Notes:\n${aiDecision.task_description}`,
+      source_file_id: null,
+      source_file_name: null,
+      source_sheet_name: null,
+      source_row_key: null,
+      department_id,
+      assigned_user_id,
+      priority: (aiDecision.priority === "critical" ? "urgent" : aiDecision.priority) as TaskPriority,
+      status: assigned_user_id ? "pending" : "unassigned",
+      created_by: createdBy,
+      ai_classification: true,
+      ai_confidence: aiDecision.confidence,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      completed_at: null,
+    };
+
+    await dataSourceService.insert("tasks", newTask);
+    return newTask;
   },
 
   // Legacy createTask mapping for internal system updates retaining backward compat
@@ -175,6 +259,7 @@ export const taskService = {
   }): Promise<AppTask> {
     const task: AppTask = {
       id: uid("tsk"),
+      company_id: getDb().users.find(u => u.id === params.created_by)?.company_id || "demo",
       title: params.title,
       description: params.description,
       source_file_id: params.source_file_id,
@@ -248,6 +333,7 @@ export const taskService = {
       title: "Task Assigned to You",
       message: `You have been assigned to: ${task.title}`,
       task_id: task.id,
+      company_id: task.company_id
     });
 
     realtime.publish({ type: "task.updated", task: { ...task, assigned_user_id: assigneeId } });

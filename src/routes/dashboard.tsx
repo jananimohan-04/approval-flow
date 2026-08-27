@@ -13,7 +13,7 @@ function DashboardPage() {
   const db = useDatabase();
 
   if (user === undefined) return null;
-    if (user === null) return <Navigate to="/" replace />;
+  if (user === null) return <Navigate to="/" replace />;
 
   const isAdmin = user.role === "admin";
 
@@ -154,7 +154,7 @@ function DashboardPage() {
               <div className="flex items-center justify-between p-3 border rounded-lg bg-surface">
                 <span className="text-sm font-medium">Active Mapping Rules</span>
                 <span className="font-mono bg-primary/10 text-primary px-2 py-0.5 rounded text-sm">
-                  {db.ai_rules.filter(r => r.active).length}
+                  {db.ai_rules.filter(r => r.is_active && (user.role === "super_admin" || r.company_id === user.company_id)).length}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground pt-2">

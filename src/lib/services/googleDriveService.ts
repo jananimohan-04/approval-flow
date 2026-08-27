@@ -250,6 +250,7 @@ export const googleDriveService = {
     userId: string,
     monitoredFile: DataSourceModel,
   ): Promise<void> {
+    const user = getDb().users.find((u) => u.id === userId);
     await taskService.evaluateAndCreateTask({
       source: monitoredFile.file_name,
       sheet: sheetName,
@@ -257,7 +258,8 @@ export const googleDriveService = {
       row: rowData,
       source_file_id: monitoredFile.id,
       source_row_key: rowKey,
-      created_by: "system"
+      created_by: "system",
+      company_id: user?.company_id || "",
     });
   }
 };

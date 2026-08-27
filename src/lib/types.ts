@@ -6,7 +6,7 @@
 export type AppRole = 'super_admin' | 'company_admin' | 'admin' | 'department_user'; // 'admin' kept for legacy migrating
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'rejected' | 'unassigned';
 export type SyncStatus = 'idle' | 'syncing' | 'error';
-export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'critical' | 'urgent';
 
 export interface CompanyModel {
   id: string;
@@ -62,15 +62,16 @@ export interface AppTask {
 }
 
 export interface AiRule {
-  company_id: string;
   id: string;
+  company_id: string;
   name: string;
   description: string | null;
-  keywords: string; // comma-separated
-  source_conditions: string | null;
-  target_department_id: string | null;
+  keywords: string[];
+  target_department_id: string;
   priority: TaskPriority;
-  active: boolean;
+  task_action: "create_task" | "ignore" | "manual_review";
+  rule_order: number;
+  is_active: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -123,6 +124,7 @@ export interface GoogleDriveConnection {
 // Data Sources (formerly monitored files)
 export interface DataSourceModel {
   id: string;
+  company_id: string | null;
   google_file_id: string;
   google_folder_id: string | null;
   file_name: string;
