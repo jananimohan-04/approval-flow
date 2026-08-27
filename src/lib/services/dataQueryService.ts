@@ -68,16 +68,15 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
 
     // 2. Fetch connection credentials bypassing user trust for server-executed Drive stream
     const { data: conns } = await supabase.from('google_drive_connections')
-        .select('user_id')
+        .select('user_id, encrypted_access_token')
         .eq('company_id', fileData.company_id)
         .limit(1);
 
     const conn = conns && conns.length > 0 ? conns[0] : null;
 
-    if (!conn) throw new Error("No connected Drive account for this company.");
+    if (!conn || !conn.encrypted_access_token) throw new Error("No connected Drive account for this company.");
 
-    const { getValidToken } = await import("./driveFunctions");
-    const token = await getValidToken(conn.user_id);
+    const token = conn.encrypted_access_token;
 
     const downloadUrl = fileData.mime_type === "application/vnd.google-apps.spreadsheet"
         ? `https://www.googleapis.com/drive/v3/files/${fileData.google_file_id}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
