@@ -57,6 +57,10 @@ function UsersPage() {
         }
     }
 
+    const visibleUsers = user.role === "super_admin"
+        ? db.users
+        : db.users.filter(u => u.company_id === user.company_id);
+
     return (
         <AppShell
             title="Users Management"
@@ -87,7 +91,7 @@ function UsersPage() {
                                     value={deptId}
                                     onChange={e => setDeptId(e.target.value)}
                                 >
-                                    {db.departments.map(d => (
+                                    {db.departments.filter(d => user.role === "super_admin" || d.company_id === user.company_id).map(d => (
                                         <option key={d.id} value={d.id}>{d.name}</option>
                                     ))}
                                 </select>
@@ -113,7 +117,7 @@ function UsersPage() {
             }
         >
             <div className="grid grid-cols-1 gap-4">
-                {db.users.map((appUser) => {
+                {visibleUsers.map((appUser) => {
                     const dept = db.departments.find(d => d.id === appUser.department_id);
                     return (
                         <div key={appUser.id} className="border bg-card rounded-xl p-4 flex items-center justify-between">

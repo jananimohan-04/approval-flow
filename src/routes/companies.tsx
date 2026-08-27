@@ -25,6 +25,7 @@ function CompaniesPage() {
     const [description, setDescription] = useState("");
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
+    const [addingUserTo, setAddingUserTo] = useState<string | null>(null);
 
     if (!user) return <Navigate to="/" replace />;
     if (user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
@@ -34,7 +35,7 @@ function CompaniesPage() {
         setLoading(true);
         try {
             await dataSourceService.insert("companies" as any, {
-                id: uid("co"),
+                id: crypto.randomUUID(),
                 name,
                 code: code.toUpperCase().replace(/\s/g, '_'),
                 description,
@@ -107,17 +108,74 @@ function CompaniesPage() {
                                     <h3 className="font-semibold text-lg">{co.name}</h3>
                                     <p className="text-xs font-mono text-muted-foreground mt-0.5">{co.code}</p>
                                 </div>
-                                <span className={`flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded ${co.status === 'active' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const nextStatus = co.status === 'active' ? 'inactive' : 'active';
+                                            await dataSourceService.update("companies" as any, co.id, { status: nextStatus } as any);
+                                            toast.success(`Company ${nextStatus} successfully`);
+                                        } catch (err: any) {
+                                            toast.error(err.message);
+                                        }
+                                    }}
+                                    className={`flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded cursor-pointer transition-colors hover:opacity-80 ${co.status === 'active' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}
+                                >
                                     {co.status === 'active' ? <CheckCircle2 className="size-3" /> : <XCircle className="size-3" />}
                                     {co.status}
-                                </span>
+                                </button>
                             </div>
                             {co.description && <p className="text-sm text-muted-foreground">{co.description}</p>}
                             <div className="flex items-center gap-4 text-sm text-muted-foreground border-t pt-3 mt-1">
                                 <span><strong>{coUsers.length}</strong> Total Provisioned Users</span>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                                <strong>Admins:</strong> {coAdmins.length > 0 ? coAdmins.map(a => a.email).join(', ') : 'None assigned yet'}
+
+                            <div className="mt-2 space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">User Directory</p>
+                                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] uppercase font-bold" onClick={() => setAddingUserTo(co.id)}>
+                                        <Plus className="size-3 mr-1" /> Provision User
+                                    </Button>
+                                </div>
+                                {coUsers.length > 0 ? (
+                                    <div className="space-y-1">
+                                        {coUsers.map(u => (
+                                            <div key={u.id} className={`text-xs border rounded p-2 flex flex-col gap-2 ${u.active ? 'bg-slate-50 dark:bg-slate-900 border-border' : 'bg-red-50/50 dark:bg-red-950/20 border-red-100 dark:border-red-900/50 opacity-75'}`}>
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold">{u.name}</span>
+                                                        {!u.active && <span className="text-[9px] font-bold text-red-600 bg-red-100 px-1 rounded uppercase tracking-wider">Deactivated</span>}
+                                                    </div>
+                                                    <span className="text-[10px] bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">{u.role}</span>
+                                                </div>
+                                                <div className="text-muted-foreground flex justify-between items-center gap-2">
+                                                    <span className="truncate">{u.email}</span>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <span className="text-[9px] text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-900/30 px-1 rounded-sm border border-amber-200 dark:border-amber-800 hidden sm:inline-block">
+                                                            [🔒 SSO]
+                                                        </span>
+                                                        <Button
+                                                            variant={u.active ? "outline" : "default"}
+                                                            size="sm"
+                                                            className={`h-5 text-[10px] px-2 py-0 ${!u.active && 'bg-red-600 hover:bg-red-700 text-white'}`}
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await dataSourceService.update("users" as any, u.id, { active: !u.active } as any);
+                                                                    toast.success(`User ${u.active ? 'deactivated' : 'activated'} successfully`);
+                                                                } catch (err: any) {
+                                                                    toast.error(err.message);
+                                                                }
+                                                            }}
+                                                        >
+                                                            {u.active ? 'Deactivate' : 'Reactivate'}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-muted-foreground italic">No users provisioned yet.</div>
+                                )}
                             </div>
                         </div>
                     );
@@ -128,6 +186,78 @@ function CompaniesPage() {
                     </div>
                 )}
             </div>
+            {addingUserTo && (
+                <AddCompanyUserDialog
+                    companyId={addingUserTo}
+                    companyName={db.companies.find(c => c.id === addingUserTo)?.name || ""}
+                    onClose={() => setAddingUserTo(null)}
+                />
+            )}
         </AppShell>
+    );
+}
+
+function AddCompanyUserDialog({ companyId, companyName, onClose }: { companyId: string, companyName: string, onClose: () => void }) {
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [role, setRole] = useState("company_admin");
+    const [loading, setLoading] = useState(false);
+
+    async function handleAdd(e: React.FormEvent) {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await dataSourceService.insert("users" as any, {
+                id: crypto.randomUUID(),
+                company_id: companyId,
+                name,
+                email,
+                role,
+                active: true,
+                created_at: new Date().toISOString()
+            } as any);
+            toast.success(`User ${email} securely provisioned to ${companyName}!`);
+            onClose();
+        } catch (err: any) {
+            toast.error(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return (
+        <Dialog open={true} onOpenChange={(val) => !val && onClose()}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Provision User to {companyName}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleAdd} className="space-y-4">
+                    <p className="text-xs text-muted-foreground">This directly injects a pre-authorized Google Account mapping for this specific Tenant workspace.</p>
+                    <div className="space-y-2">
+                        <Label>Full Name</Label>
+                        <Input required value={name} onChange={e => setName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Google Email Address</Label>
+                        <Input required type="email" value={email} onChange={e => setEmail(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Platform Role</Label>
+                        <select
+                            required
+                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={role}
+                            onChange={e => setRole(e.target.value)}
+                        >
+                            <option value="company_admin">Company Admin (Can manage their own users + Google Drive integration)</option>
+                            <option value="department_user">Department User (Can only view active tasks and ask AI questions)</option>
+                        </select>
+                    </div>
+                    <Button className="w-full mt-4" type="submit" disabled={loading}>
+                        {loading ? "Registering..." : `Authorize User for ${companyName}`}
+                    </Button>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }

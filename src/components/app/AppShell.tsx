@@ -111,7 +111,7 @@ export function AppShell({
         <div className="mt-auto border-t p-3">
           <p className="text-sm font-medium truncate">{user.name}</p>
           <p className="label-mono mt-0.5 text-xs text-muted-foreground">
-            {user.role === "admin" ? "Admin" : "Dept User"} · {user.department_id ? "Department" : "Unassigned"}
+            {user.role === "super_admin" ? "Super Admin" : user.role === "company_admin" ? "Org Admin" : user.role === "admin" ? "Admin" : "Dept User"} · {user.department_id ? "Department" : "Unassigned"}
           </p>
           <Button
             variant="outline"

@@ -28,8 +28,24 @@ function GoogleCallbackPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [errorMsg, setErrorMsg] = useState("");
+  const [sessionReady, setSessionReady] = useState(false);
+
+  // Wait for session to initialize (useSession is async on page load)
+  useEffect(() => {
+    if (user) {
+      setSessionReady(true);
+      return;
+    }
+    // Give session up to 5 seconds to load after redirect
+    const timeout = setTimeout(() => {
+      setSessionReady(true); // Mark ready even if null — will show error
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, [user]);
 
   useEffect(() => {
+    if (!sessionReady) return; // Wait for session to load
+
     async function process() {
       if (!user) {
         setStatus("error");
@@ -88,7 +104,7 @@ function GoogleCallbackPage() {
     }
 
     process();
-  }, [user, navigate]);
+  }, [sessionReady, user, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

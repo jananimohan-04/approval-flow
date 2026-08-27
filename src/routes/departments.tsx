@@ -25,7 +25,7 @@ function DepartmentsPage() {
     const [loading, setLoading] = useState(false);
 
     if (!user) return <Navigate to="/" replace />;
-    if (user.role !== "admin") return <Navigate to="/dashboard" replace />;
+    if (user.role !== "admin" && user.role !== "company_admin" && user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
 
     async function handleAddDept(e: React.FormEvent) {
         e.preventDefault();
@@ -33,6 +33,7 @@ function DepartmentsPage() {
         try {
             await dataSourceService.insert("departments", {
                 id: uid("dept"),
+                company_id: user!.company_id,
                 name,
                 description,
                 active: true,

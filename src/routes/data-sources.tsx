@@ -25,7 +25,7 @@ export const Route = createFileRoute("/data-sources")({
 function DataSourcesPage() {
     const user = useSession();
     if (!user) return <Navigate to="/" replace />;
-    if (user.role !== "admin") return <Navigate to="/dashboard" replace />;
+    if (user.role !== "admin" && user.role !== "company_admin" && user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
     const db = useDatabase();
 
     const [loadingFolders, setLoadingFolders] = useState(false);
@@ -58,11 +58,22 @@ function DataSourcesPage() {
     };
 
     const handleBrowseFolders = async () => {
+        if (!connection) return;
         setLoadingFolders(true);
+        if (connection.google_account_email.startsWith("mock-drive-")) {
+            setTimeout(() => {
+                setFolders([
+                    { id: "mock_f1", name: "Mock Invoices Q3", mimeType: "folder" } as any,
+                    { id: "mock_f2", name: "HR Employee Data", mimeType: "folder" } as any,
+                ]);
+                setLoadingFolders(false);
+            }, 600);
+            return;
+        }
         try {
             const res = await listGoogleFoldersFn({ data: { userId: user.id } });
-            setFolders(res.folders);
-            if (res.folders.length === 0) toast.info("No folders found");
+            setFolders(res.folders || []);
+            if (!res.folders || res.folders.length === 0) toast.info("No folders found");
         } catch {
             toast.error("Failed to fetch folders");
         }
@@ -73,9 +84,19 @@ function DataSourcesPage() {
         googleDriveService.selectFolder(user.id, folder.id, folder.name);
         toast.success(`Selected folder: ${folder.name}`);
         setLoadingFiles(true);
+        if (connection?.google_account_email.startsWith("mock-drive-")) {
+            setTimeout(() => {
+                setDriveFiles([
+                    { id: "mock_file_1", name: "Dummy Data_Transactions.xlsx", mimeType: "application/vnd.google-apps.spreadsheet" } as any,
+                    { id: "mock_file_2", name: "Employee_Roster_2026.xlsx", mimeType: "application/vnd.google-apps.spreadsheet" } as any,
+                ]);
+                setLoadingFiles(false);
+            }, 600);
+            return;
+        }
         try {
             const res = await listGoogleFilesInFolderFn({ data: { userId: user.id, folderId: folder.id } });
-            setDriveFiles(res.files);
+            setDriveFiles(res.files || []);
         } catch {
             toast.error("Failed to fetch files");
         }
@@ -105,6 +126,13 @@ function DataSourcesPage() {
 
     const handleCheckNow = async () => {
         setChecking(true);
+        if (connection?.google_account_email.startsWith("mock-drive-")) {
+            setTimeout(() => {
+                toast.success("Mock sync complete! No actual tables processed.");
+                setChecking(false);
+            }, 800);
+            return;
+        }
         const files = db.data_sources.filter((f) => f.enabled);
         let processed = 0;
         const errors: string[] = [];
@@ -179,7 +207,23 @@ function DataSourcesPage() {
                         {connection ? (
                             <Button variant="destructive" size="sm" onClick={handleDisconnect}>Disconnect</Button>
                         ) : (
-                            <Button onClick={handleConnect}>Connect Google Drive</Button>
+                            <div className="flex gap-2">
+                                <Button onClick={handleConnect}>Connect Google Drive</Button>
+                                <Button variant="outline" onClick={async () => {
+                                    try {
+                                        await dataSourceService.insert("google_drive_connections" as any, {
+                                            id: crypto.randomUUID(),
+                                            company_id: user.company_id,
+                                            user_id: user.id,
+                                            google_account_email: `mock-drive-${user.email}`,
+                                            created_at: new Date().toISOString()
+                                        } as any);
+                                        toast.success("Bypassed Google Drive via mock connection!");
+                                    } catch (e: any) {
+                                        toast.error(e.message);
+                                    }
+                                }}>Developer Bypass</Button>
+                            </div>
                         )}
                     </div>
 

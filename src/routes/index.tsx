@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Database, Network, ShieldCheck, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -14,6 +16,11 @@ function LoginPage() {
   const user = useSession();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
+
+  // Dev Fallback state
+  const [email, setEmail] = useState("admin@demo.com");
+  const [password, setPassword] = useState("password123");
 
   useEffect(() => {
     if (user) {
@@ -33,6 +40,23 @@ function LoginPage() {
       if (error) throw error;
     } catch (e: any) {
       toast.error(e.message || "Something went wrong.");
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleEmailLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      if (error) throw error;
+      toast.success("Dev bypass successful!");
+      // The useSession hook will catch this and route automatically
+    } catch (e: any) {
+      toast.error(e.message || "Invalid credentials");
       setIsSubmitting(false);
     }
   }
@@ -101,12 +125,59 @@ function LoginPage() {
                 />
                 <path d="M1 1h22v22H1z" fill="none" />
               </svg>
-              {isSubmitting ? "Connecting..." : "Continue with Google"}
+              {isSubmitting && !showEmailLogin ? "Connecting..." : "Continue with Google"}
             </Button>
           </div>
 
-          <p className="mt-4 text-xs text-muted-foreground">
-            Use the Google account registered by your administrator.
+          <div className="relative mt-8">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with email
+              </span>
+            </div>
+          </div>
+
+          {!showEmailLogin ? (
+            <Button
+              variant="ghost"
+              className="w-full mt-4 text-xs text-muted-foreground"
+              onClick={() => setShowEmailLogin(true)}
+            >
+              Use Developer Password Bypass
+            </Button>
+          ) : (
+            <form onSubmit={handleEmailLogin} className="mt-4 space-y-4 text-left">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Signing in..." : "Sign in securely"}
+              </Button>
+            </form>
+          )}
+
+          <p className="mt-6 text-xs text-muted-foreground/60 max-w-[16rem] mx-auto">
+            (Google OAuth requires manual cloud console setup to activate fully.)
           </p>
         </div>
       </section>

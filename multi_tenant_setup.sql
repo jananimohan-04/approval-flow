@@ -17,9 +17,9 @@ INSERT INTO public.companies (id, name, code)
 VALUES ('00000000-0000-0000-0000-000000000000', 'Default Company', 'DEFAULT')
 ON CONFLICT DO NOTHING;
 
--- 3. Update Existing Roles Enum safely (if they don't exist)
-ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'super_admin';
-ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'company_admin';
+-- 3. Update Existing Roles constraint safely
+ALTER TABLE public.app_users DROP CONSTRAINT IF EXISTS app_users_role_check;
+ALTER TABLE public.app_users ADD CONSTRAINT app_users_role_check CHECK (role IN ('super_admin', 'company_admin', 'admin', 'department_user', 'manager'));
 
 -- 4. Add company_id safely to all core tables
 DO $$
