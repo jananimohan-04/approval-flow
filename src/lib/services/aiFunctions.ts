@@ -248,7 +248,7 @@ Output exactly as JSON:
         } catch (e: any) {
             console.error("Server QA Error:", e.message);
             return {
-                answer: "AI is temporarily unavailable. Please try again.",
+                answer: `AI Error: ${e.message}`,
                 sources: []
             } as QAAnswer;
         }

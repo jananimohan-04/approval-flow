@@ -2,8 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 
 // Uses anon key + user token to ensure RLS is strictly enforced!
 export function getSecureServerSupabase(accessToken: string) {
-    const url = process.env["VITE_SUPABASE_URL"] || process.env["NEXT_PUBLIC_SUPABASE_URL"] || "";
-    const key = process.env["VITE_SUPABASE_ANON_KEY"] || process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"] || "";
+    const url = process.env["VITE_SUPABASE_URL"] || (import.meta as any).env?.VITE_SUPABASE_URL || "";
+    const key = process.env["VITE_SUPABASE_ANON_KEY"] || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "";
 
     if (!url || !key) {
         throw new Error("Missing Supabase environment variables on server.");
@@ -66,22 +66,45 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     if (!fileData) throw new Error(`Data source not found for reference: ${query.dataSourceId}`);
     const fileName = fileData.file_name || "Unknown File";
 
-    // 2. Fetch connection credentials securely for the current user
+    // 2. Validate user identity from their access token
     const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
     if (!user || userError) {
         console.error("Auth User Error:", userError);
         throw new Error("Unauthenticated AI invocation.");
     }
 
-    const { data: conns } = await supabase.from('google_drive_connections')
-        .select('user_id, encrypted_access_token')
-        .eq('user_id', user.id)
-        .not('encrypted_access_token', 'is', null)
-        .limit(1);
+    // 3. Use service-role client to bypass RLS and fetch the Google token
+    //    (RLS policies on google_drive_connections block anon-key reads of encrypted tokens)
+    const serviceUrl = process.env["VITE_SUPABASE_URL"] || (import.meta as any).env?.VITE_SUPABASE_URL || "";
+    const serviceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"] || (import.meta as any).env?.SUPABASE_SERVICE_ROLE_KEY || process.env["SUPABASE_SECRET_KEY"] || "";
 
-    const conn = conns && conns.length > 0 ? conns[0] : null;
+    let conn: any = null;
+    if (serviceUrl && serviceKey) {
+        const serviceSupabase = createClient(serviceUrl, serviceKey);
+        const { data: conns } = await serviceSupabase.from('google_drive_connections')
+            .select('user_id, encrypted_access_token')
+            .eq('user_id', user.id)
+            .not('encrypted_access_token', 'is', null)
+            .eq('status', 'connected')
+            .limit(1);
+        conn = conns && conns.length > 0 ? conns[0] : null;
+    }
 
-    if (!conn || !conn.encrypted_access_token) throw new Error("No connected Drive account with valid tokens found.");
+    // Fallback: try with anon client in case service key is unavailable
+    if (!conn) {
+        const { data: conns } = await supabase.from('google_drive_connections')
+            .select('user_id, encrypted_access_token')
+            .eq('user_id', user.id)
+            .not('encrypted_access_token', 'is', null)
+            .eq('status', 'connected')
+            .limit(1);
+        conn = conns && conns.length > 0 ? conns[0] : null;
+    }
+
+    if (!conn || !conn.encrypted_access_token) {
+        console.error("Drive connection lookup failed for user:", user.id, "conn:", conn);
+        throw new Error("No connected Drive account with valid tokens found.");
+    }
 
     const token = conn.encrypted_access_token;
 
