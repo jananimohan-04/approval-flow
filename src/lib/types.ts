@@ -145,7 +145,7 @@ export interface DataSourceRow {
   sheet_name: string;
   row_key: string;
   row_hash: string;
-  
+
   first_seen_at: string;
   last_seen_at: string;
   updated_at: string;
@@ -184,4 +184,5 @@ export interface Database {
   data_source_rows: DataSourceRow[];
 
   session_user_id: string | null; // local state only
+  session_initialized?: boolean;
 }
