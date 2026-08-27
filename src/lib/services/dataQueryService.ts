@@ -67,10 +67,12 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     const fileName = fileData.file_name || "Unknown File";
 
     // 2. Fetch connection credentials bypassing user trust for server-executed Drive stream
-    const { data: conn } = await supabase.from('google_drive_connections')
+    const { data: conns } = await supabase.from('google_drive_connections')
         .select('user_id')
         .eq('company_id', fileData.company_id)
-        .single();
+        .limit(1);
+
+    const conn = conns && conns.length > 0 ? conns[0] : null;
 
     if (!conn) throw new Error("No connected Drive account for this company.");
 
@@ -89,8 +91,9 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     const workbook = XLSX.read(buffer, { type: "array" });
 
     // Case-insensitive sheet matching to handle AI hallucinated casings
+    const targetSheetRaw = query.sheetName || "";
     const sheetKey = Object.keys(workbook.Sheets).find(
-        k => k.trim().toLowerCase() === query.sheetName.trim().toLowerCase()
+        k => k.trim().toLowerCase() === targetSheetRaw.trim().toLowerCase()
     );
     const sheet = sheetKey ? workbook.Sheets[sheetKey] : null;
 
@@ -143,7 +146,7 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
         if (!query.targetColumn) {
             finalResult = "Error: targetColumn required for math operations.";
         } else {
-            const targetCol = query.targetColumn.trim().toLowerCase();
+            const targetCol = String(query.targetColumn).trim().toLowerCase();
             const nums = filtered.map((r: any) => {
                 const lowerR: Record<string, unknown> = {};
                 for (const [k, v] of Object.entries(r)) {
