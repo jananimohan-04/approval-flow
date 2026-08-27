@@ -34,7 +34,7 @@ const NAV: NavItem[] = [
   // Management
   { to: "/departments", label: "Departments", icon: Network, roles: ["super_admin", "company_admin", "admin"] },
   { to: "/users", label: "Users", icon: Users, roles: ["super_admin", "company_admin", "admin"] },
-  { to: "/data-sources", label: "Data Sources", icon: Database, roles: ["super_admin", "company_admin", "admin"] },
+  { to: "/data-sources", label: "Connect to Drive", icon: Database, roles: ["super_admin", "company_admin", "admin"] },
   { to: "/ai-rules", label: "AI Rules", icon: BookOpen, roles: ["super_admin", "company_admin", "admin"] },
 
   // Monitoring

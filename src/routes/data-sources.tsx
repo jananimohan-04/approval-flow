@@ -196,7 +196,7 @@ function DataSourcesPage() {
 
     return (
         <AppShell
-            title="Data Sources"
+            title="Connect to Drive"
             subtitle="Connect Google Drive folders and Excel files for AI analysis"
             actions={
                 <Button onClick={handleCheckNow} disabled={checking}>
