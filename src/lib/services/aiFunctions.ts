@@ -159,7 +159,20 @@ You must output a JSON object obeying this exactly:
             if (!intentResponse.ok) throw new Error("Intent parsing failed.");
 
             const intentResult = await intentResponse.json();
-            const plan = JSON.parse(intentResult.choices[0].message.content) as { queries: StructuredQuery[] };
+
+            let plan: { queries: StructuredQuery[] } = { queries: [] };
+            try {
+                // OpenAI might wrap response in markdown blocks
+                let rawJson = intentResult.choices[0].message.content;
+                if (rawJson.startsWith("```json")) {
+                    rawJson = rawJson.replace(/```json\n/, "").replace(/\n```/, "");
+                }
+                plan = JSON.parse(rawJson) as { queries: StructuredQuery[] };
+            } catch (e) {
+                console.error("AI JSON Parse Error:", e, intentResult.choices[0].message.content);
+                // Fallback to empty queries if it hallucinated non-JSON
+            }
+
             let aggregatedResults: QueryResult[] = [];
 
             // 3. SECURE SERVER EVALUATION LOOP OVER ALL ROWS BYPASSING LIMITS
@@ -195,7 +208,8 @@ You must output a JSON object obeying this exactly:
                             role: "system",
                             content: `You are the Nexus AI Assistant. You answer questions definitively based ONLY on the Deterministic Executed Results provided.
 Do NOT attempt to calculate numbers yourself, trust the server's math injected below implicitly.
-If the requested information/field/source genuinely does not exist or cannot be determined (e.g., no queries were executed, or the target column is missing), explicitly output EXACTLY: "I couldn't find that information in the connected data sources."
+If the requested numerical or filtered data cannot be determined (no queries executed), explicitly output EXACTLY: "I couldn't find that information in the connected data sources." 
+UNLESS the user is asking a general question about what data/columns/files are available, in which case you should explain the Availabe Data Sources (schemas) to them directly.
 CRITICAL: If a count or sum successfully executes but mathematically results in 0, you MUST state the 0 result explicitly (e.g. "There are 0 pending invoices."). Do NOT say you couldn't find it.
 
 Output exactly as JSON:
@@ -206,17 +220,28 @@ Output exactly as JSON:
                         },
                         {
                             role: "user",
-                            content: `Question: "${data.question}"\n\n${injectionContext}\n\nFormulate the exact JSON response passing strictly the answer string.`
+                            content: `Available Data Sources (Schemas):\n${schemaSummary}\n\nQuestion: "${data.question}"\n\n${injectionContext}\n\nFormulate the exact JSON response passing strictly the answer string.`
                         }
                     ]
                 })
             });
 
-            const finalResult = await finalResponse.json();
-            const answerObj = JSON.parse(finalResult.choices[0].message.content);
+            const finalData = await finalResponse.json();
+            let rawJson = finalData.choices[0].message.content;
+            let finalAnswer: any = { answer: "AI is temporarily unavailable" };
+
+            try {
+                if (rawJson.startsWith("```json")) {
+                    rawJson = rawJson.replace(/```json\n/, "").replace(/\n```/, "");
+                }
+                finalAnswer = JSON.parse(rawJson);
+            } catch (e) {
+                // If AI ignores JSON strict output, just use the raw text
+                finalAnswer = { answer: rawJson };
+            }
 
             return {
-                answer: answerObj.answer,
+                answer: finalAnswer.answer || "I could not answer that question.",
                 sources: exactSources.length > 0 ? exactSources : []
             } as QAAnswer;
 

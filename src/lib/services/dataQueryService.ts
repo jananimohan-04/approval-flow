@@ -102,21 +102,24 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     }
 
     // 3. Apply deterministic filtering in application code
+    const filters = query.filters || [];
     const filtered = allRows.filter(row => {
         const lowerRow: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(row)) {
-            lowerRow[k.trim().toLowerCase()] = v;
+            if (k) lowerRow[String(k).trim().toLowerCase()] = v;
         }
 
-        for (const f of query.filters) {
-            const searchCol = f.column.trim().toLowerCase();
+        for (const f of filters) {
+            if (!f || !f.column) continue;
+
+            const searchCol = String(f.column).trim().toLowerCase();
             const val = lowerRow[searchCol];
             if (val === undefined || val === null) return false;
 
             const strVal = String(val).toLowerCase().trim();
-            const strFilter = String(f.value).toLowerCase().trim();
+            const strFilter = String(f.value || "").toLowerCase().trim();
             const numVal = parseFloat(String(val).replace(/[^0-9.-]+/g, ""));
-            const numFilter = parseFloat(String(f.value));
+            const numFilter = parseFloat(String(f.value || ""));
 
             if (f.operator === "eq" && strVal !== strFilter) return false;
             if (f.operator === "contains" && !strVal.includes(strFilter)) return false;
