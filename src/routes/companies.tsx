@@ -280,10 +280,12 @@ function AddCompanyUserDialog({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("company_admin");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg("");
     try {
       if (password) {
 
@@ -306,6 +308,7 @@ function AddCompanyUserDialog({
       onClose();
     } catch (err: any) {
       toast.error(err.message);
+      setErrorMsg(err.message);
     } finally {
       setLoading(false);
     }
@@ -355,6 +358,11 @@ function AddCompanyUserDialog({
               </option>
             </select>
           </div>
+          {errorMsg && (
+            <div className="p-3 text-sm text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 rounded-md border border-red-200 dark:border-red-800">
+              {errorMsg}
+            </div>
+          )}
           <Button className="w-full mt-4" type="submit" disabled={loading}>
             {loading ? "Registering..." : `Authorize User for ${companyName}`}
           </Button>
