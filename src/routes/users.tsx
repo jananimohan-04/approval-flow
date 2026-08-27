@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { dataSourceService } from "@/lib/data/dataSource";
 import type { AppRole } from "@/lib/types";
+import { createDatabaseAuthUserFn } from "@/lib/services/authFunctions";
 
 export const Route = createFileRoute("/users")({
     component: UsersPage,
@@ -38,7 +39,6 @@ function UsersPage() {
         setLoading(true);
         try {
             if (password) {
-                const { createDatabaseAuthUserFn } = await import("@/lib/services/authFunctions");
                 const res = await createDatabaseAuthUserFn({ data: { email, password } });
                 if (!res.success) throw new Error(res.error || "Failed to create local password login.");
             }
