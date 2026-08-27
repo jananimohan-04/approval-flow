@@ -1,12 +1,14 @@
-import { Bell } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import { Bell, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { useDatabase, mutate } from "@/lib/store";
+import type { AppUser, AppNotification } from "@/lib/types";
+import { supabase } from "@/lib/supabase";
 import { notificationService } from "@/lib/services/notificationService";
-import { useDatabase } from "@/lib/store";
-import type { User } from "@/lib/types";
 
-export function NotificationBell({ user }: { user: User }) {
+export function NotificationBell({ user }: { user: AppUser }) {
   useDatabase();
   const items = notificationService.listFor(user.id).slice(0, 8);
   const unread = notificationService.unreadCount(user.id);

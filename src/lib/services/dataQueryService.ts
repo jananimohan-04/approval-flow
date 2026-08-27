@@ -47,39 +47,39 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
     // 1. Resolve file name for context
     const { data: fileData } = await supabase
         .from("data_sources")
-        .select("file_name")
+        .select("file_name, company_id, mime_type")
         .eq("id", query.dataSourceId)
         .single();
 
-    const fileName = fileData?.file_name || "Unknown File";
+    if (!fileData) throw new Error("Data source not found.");
+    const fileName = fileData.file_name || "Unknown File";
 
-    // 2. Fetch absolutely ALL rows for this file/sheet to bypass limits correctly
-    // Notice we don't apply limit here so we can do accurate server-side aggregations across 1000s of rows.
+    // 2. Fetch connection credentials bypassing user trust for server-executed Drive stream
+    const { data: conn } = await supabase.from('google_drive_connections')
+        .select('user_id')
+        .eq('company_id', fileData.company_id)
+        .single();
+
+    if (!conn) throw new Error("No connected Drive account for this company.");
+
+    const { getValidToken } = await import("./driveFunctions");
+    const token = await getValidToken(conn.user_id);
+
+    const downloadUrl = fileData.mime_type === "application/vnd.google-apps.spreadsheet"
+        ? `https://www.googleapis.com/drive/v3/files/${query.dataSourceId}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+        : `https://www.googleapis.com/drive/v3/files/${query.dataSourceId}?alt=media`;
+
+    const dlRes = await fetch(downloadUrl, { headers: { Authorization: `Bearer ${token}` } });
+    if (!dlRes.ok) throw new Error("Failed to read required data from connected Google Drive.");
+
+    const buffer = await dlRes.arrayBuffer();
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheet = workbook.Sheets[query.sheetName];
+
     let allRows: any[] = [];
-    let page = 0;
-    const pageSize = 1000;
-    let hasMore = true;
-
-    while (hasMore) {
-        const { data: rows, error } = await supabase
-            .from("data_source_rows")
-            .select("row_data")
-            .eq("data_source_id", query.dataSourceId)
-            .eq("sheet_name", query.sheetName)
-            .range(page * pageSize, (page + 1) * pageSize - 1);
-
-        if (error) {
-            console.error("Supabase Query Error:", error);
-            break;
-        }
-
-        if (rows && rows.length > 0) {
-            allRows = allRows.concat(rows.map(r => r.row_data));
-            page++;
-            if (rows.length < pageSize) hasMore = false;
-        } else {
-            hasMore = false;
-        }
+    if (sheet) {
+        allRows = XLSX.utils.sheet_to_json(sheet, { blankrows: false, defval: "" });
     }
 
     // 3. Apply deterministic filtering in application code

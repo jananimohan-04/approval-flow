@@ -127,6 +127,7 @@ export interface DataSourceModel {
   google_folder_id: string | null;
   file_name: string;
   file_type: string | null;
+  schema_snapshot: Record<string, string[]> | null;
   mime_type: string | null;
   enabled: boolean;
   last_modified_at: string | null;
@@ -144,7 +145,7 @@ export interface DataSourceRow {
   sheet_name: string;
   row_key: string;
   row_hash: string;
-  row_data: Record<string, unknown>; // mapped to JSONB
+  
   first_seen_at: string;
   last_seen_at: string;
   updated_at: string;
