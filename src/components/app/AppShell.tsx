@@ -24,17 +24,19 @@ const NAV: NavItem[] = [
   // Super Admin Only
   { to: "/companies", label: "Companies", icon: Database, roles: ["super_admin"] },
 
+  // Data Connectivity (Moved to top near Nexus AI Operations logo)
+  { to: "/data-sources", label: "Connect to Drive", icon: Database, roles: ["super_admin", "company_admin", "admin"] },
+
   // Dashboard & Common
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["super_admin", "company_admin", "admin", "department_user"] },
 
   // Tasks & AI
   { to: "/tasks", label: "Tasks", icon: CheckSquare, roles: ["super_admin", "company_admin", "admin", "department_user"] },
-  { to: "/ai-assistant", label: "AI Assistant", icon: Bot, roles: ["company_admin", "admin", "department_user"] }, // Specific to company data context, super_admin wouldn't usually ask this without impersonation
+  { to: "/ai-assistant", label: "AI Assistant", icon: Bot, roles: ["company_admin", "admin", "department_user"] },
 
   // Management
   { to: "/departments", label: "Departments", icon: Network, roles: ["super_admin", "company_admin", "admin"] },
   { to: "/users", label: "Users", icon: Users, roles: ["super_admin", "company_admin", "admin"] },
-  { to: "/data-sources", label: "Connect to Drive", icon: Database, roles: ["super_admin", "company_admin", "admin"] },
   { to: "/ai-rules", label: "AI Rules", icon: BookOpen, roles: ["super_admin", "company_admin", "admin"] },
 
   // Monitoring
