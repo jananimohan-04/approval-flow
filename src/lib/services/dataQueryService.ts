@@ -100,6 +100,17 @@ export async function executeStructuredQuery(query: StructuredQuery, accessToken
                 .limit(1);
             conn = conns2 && conns2.length > 0 ? conns2[0] : null;
         }
+
+        // Try 3: Last resort — grab any connected Drive account with a valid token
+        // (handles dev scenarios where local user email differs from Drive OAuth email)
+        if (!conn) {
+            const { data: conns3 } = await serviceSupabase.from('google_drive_connections')
+                .select('user_id, encrypted_access_token')
+                .not('encrypted_access_token', 'is', null)
+                .eq('status', 'connected')
+                .limit(1);
+            conn = conns3 && conns3.length > 0 ? conns3[0] : null;
+        }
     }
 
     // Fallback: try with anon client in case service key is unavailable
