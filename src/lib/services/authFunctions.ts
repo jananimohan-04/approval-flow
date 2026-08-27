@@ -2,8 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 
 function getServiceSupabase() {
-    const url = process.env["VITE_SUPABASE_URL"] || process.env["NEXT_PUBLIC_SUPABASE_URL"] || "";
-    const key = process.env["SUPABASE_SERVICE_ROLE_KEY"] || process.env["SUPABASE_SECRET_KEY"] || "";
+    let url = process.env["VITE_SUPABASE_URL"] || process.env["NEXT_PUBLIC_SUPABASE_URL"] || "";
+    let key = process.env["SUPABASE_SERVICE_ROLE_KEY"] || process.env["SUPABASE_SECRET_KEY"] || "";
+
+    // Fallback block if process.env gets stripped in edge cases
+    if (!url || !key) {
+        url = (import.meta as any).env?.VITE_SUPABASE_URL || "https://frilcsqywtonsiymtbww.supabase.co";
+        key = (import.meta as any).env?.SUPABASE_SERVICE_ROLE_KEY || process.env["SUPABASE_SERVICE_ROLE_KEY"] || "";
+    }
+
     if (!url || !key) return null;
     return createClient(url, key);
 }
