@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { dataSourceService } from "@/lib/data/dataSource";
 import type { AppRole } from "@/lib/types";
-import { createDatabaseAuthUserFn } from "@/lib/services/authFunctions";
+import { createDatabaseAuthUserFn } from "@/lib/services/driveFunctions";
 
 export const Route = createFileRoute("/users")({
     component: UsersPage,

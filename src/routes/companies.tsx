@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { dataSourceService } from "@/lib/data/dataSource";
-import { createDatabaseAuthUserFn } from "@/lib/services/authFunctions";
+import { createDatabaseAuthUserFn } from "@/lib/services/driveFunctions";
 
 export const Route = createFileRoute("/companies")({
   component: CompaniesPage,
