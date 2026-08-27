@@ -1,10 +1,23 @@
+import { useState } from "react";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { BookOpen, Plus, Tag, Network } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useDatabase } from "@/lib/store";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { useDatabase, uid } from "@/lib/store";
 import { useSession } from "@/hooks/useSession";
+import { dataSourceService } from "@/lib/data/dataSource";
+import { toast } from "sonner";
+import type { TaskPriority } from "@/lib/types";
 
 export const Route = createFileRoute("/ai-rules")({
     component: AiRulesPage,
@@ -14,16 +27,112 @@ function AiRulesPage() {
     const db = useDatabase();
     const user = useSession();
 
+    const [open, setOpen] = useState(false);
+    const [name, setName] = useState("");
+    const [keywords, setKeywords] = useState("");
+    const [sourceConditions, setSourceConditions] = useState("");
+    const [deptId, setDeptId] = useState("");
+    const [priority, setPriority] = useState<TaskPriority>("medium");
+    const [loading, setLoading] = useState(false);
+
     if (user === undefined) return null;
     if (user === null) return <Navigate to="/" replace />;
     if (user.role !== "admin" && user.role !== "company_admin" && user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!name || !keywords || !deptId) {
+            toast.error("Please fill in Name, Keywords, and Department.");
+            return;
+        }
+        setLoading(true);
+        try {
+            await dataSourceService.insert("ai_rules", {
+                id: uid("rule"),
+                company_id: user!.company_id,
+                name,
+                keywords,
+                source_conditions: sourceConditions || null,
+                target_department_id: deptId,
+                priority,
+                active: true,
+                created_by: user!.id,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            } as any);
+            toast.success("AI Rule created successfully");
+            setOpen(false);
+            setName("");
+            setKeywords("");
+            setSourceConditions("");
+            setDeptId("");
+            setPriority("medium");
+        } catch (e: any) {
+            toast.error(e.message);
+        } finally {
+            setLoading(false);
+        }
+    }
 
     return (
         <AppShell
             title="AI Rules & Mapping"
             subtitle="Configure how Nexus AI automatically routes parsed data"
             actions={
-                <Button><Plus className="size-4 mr-2" /> Create Rule</Button>
+                <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogTrigger asChild>
+                        <Button><Plus className="size-4 mr-2" /> Create Rule</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Create New AI Routing Rule</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+                            <div className="space-y-2">
+                                <Label>Rule Name</Label>
+                                <Input required placeholder="e.g. High Value Invoices" value={name} onChange={e => setName(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Keywords (Comma separated)</Label>
+                                <Input required placeholder="invoice, payment, overdue" value={keywords} onChange={e => setKeywords(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>File Contains Condition (Optional)</Label>
+                                <Input placeholder="e.g. Sales_Reporting" value={sourceConditions} onChange={e => setSourceConditions(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Target Department</Label>
+                                <select
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                    value={deptId}
+                                    onChange={e => setDeptId(e.target.value)}
+                                    required
+                                >
+                                    <option value="" disabled>Select a department</option>
+                                    {db.departments.filter(d => user?.role === "super_admin" || d.company_id === user?.company_id).map((d) => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Priority Level</Label>
+                                <select
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                    value={priority}
+                                    onChange={e => setPriority(e.target.value as TaskPriority)}
+                                >
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="critical">Critical</option>
+                                </select>
+                            </div>
+                            <Button type="submit" className="w-full" disabled={loading}>
+                                {loading ? "Creating..." : "Save Rule"}
+                            </Button>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             }
         >
             <div className="max-w-5xl">
@@ -72,6 +181,11 @@ function AiRulesPage() {
                             </div>
                         </div>
                     ))}
+                    {db.ai_rules.length === 0 && (
+                        <div className="text-center p-12 border border-dashed rounded-xl text-muted-foreground bg-muted/20">
+                            No active rules configured. Click Create Rule above to set up manual routing policies.
+                        </div>
+                    )}
                 </div>
             </div>
         </AppShell>
