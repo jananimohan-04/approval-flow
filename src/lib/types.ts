@@ -27,6 +27,8 @@ export interface AppUser {
   department_id: string;
   role: AppRole;
   active: boolean;
+  roles_responsibilities?: string;
+  remarks?: string;
   created_at?: string;
 }
 
@@ -158,7 +160,7 @@ export type DriveFile = { id: string; name: string; mimeType: string; modifiedTi
 export type GoogleDriveConnectionSafe = GoogleDriveConnection;
 
 export interface ClassificationResult {
-  department: string;
+  assigned_user_email: string;
   is_actionable: boolean;
   task_title: string;
   task_description: string;

@@ -32,6 +32,8 @@ function UsersPage() {
   const [name, setName] = useState("");
   const [deptId, setDeptId] = useState(db.departments[0]?.id || "");
   const [role, setRole] = useState<AppRole>("department_user");
+  const [rolesResp, setRolesResp] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [password, setPassword] = useState("");
@@ -59,6 +61,8 @@ function UsersPage() {
         company_id: user.company_id, // Pin to current user's company (unless superadmin doing impersonation, but this suffices MVP)
         department_id: deptId,
         role,
+        roles_responsibilities: rolesResp,
+        remarks: remarks,
         active: true,
         created_at: new Date().toISOString(),
       } as any);
@@ -72,6 +76,8 @@ function UsersPage() {
       setEmail("");
       setName("");
       setPassword("");
+      setRolesResp("");
+      setRemarks("");
     } catch (e: any) {
       toast.error(e.message);
       setErrorMsg(e.message);
@@ -193,6 +199,24 @@ function UsersPage() {
                     <option value="super_admin">Super Administrator</option>
                   )}
                 </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Roles & Responsibilities (For AI Assignment)</Label>
+                <textarea
+                  className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
+                  placeholder="e.g. Handles overdue invoices, client follow-ups"
+                  value={rolesResp}
+                  onChange={(e) => setRolesResp(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Remarks / Rules</Label>
+                <textarea
+                  className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
+                  placeholder="e.g. Only assign critical tasks"
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                />
               </div>
               {errorMsg && (
                 <div className="p-3 text-sm text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 rounded-md border border-red-200 dark:border-red-800 break-words">

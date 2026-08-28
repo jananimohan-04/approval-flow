@@ -8,7 +8,7 @@ export const classifyRowFn = createServerFn({ method: "POST" })
         sheet: string;
         columns: string[];
         row: Record<string, unknown>;
-        departments: string[];
+        users: { email: string; roles_responsibilities?: string; remarks?: string; }[];
         customPrompts?: string[];
     }) => data)
     .handler(async ({ data }) => {
@@ -21,6 +21,10 @@ export const classifyRowFn = createServerFn({ method: "POST" })
             const customInstructionStr = data.customPrompts && data.customPrompts.length > 0
                 ? `\n\n=== CUSTOM TARGET INSTRUCTIONS ===\nThe Admin has provided you with the following strict rules. You MUST obey these instructions above all default behavior:\n${data.customPrompts.map(p => `- ${p}`).join("\n")}`
                 : "";
+
+            const usersListContext = data.users.map(u =>
+                `Email: ${u.email}\nRoles/Responsibilities: ${u.roles_responsibilities || "None specified"}\nRemarks: ${u.remarks || "None"}\n---`
+            ).join("\n");
 
             const response = await fetch("https://api.openai.com/v1/chat/completions", {
                 method: "POST",
@@ -37,15 +41,15 @@ export const classifyRowFn = createServerFn({ method: "POST" })
                             role: "system",
                             content: `You are an AI tasked with evaluating a row of data imported from a spreadsheet (${data.source} - ${data.sheet}).
 Analyze the payload. Decide if this row requires actionable work (e.g. follow-up, approval, data entry). If it's a completely empty, junk, or non-actionable header row, set is_actionable=false.
-If actionable, classify it into EXACTLY ONE of the provided departments.
+If actionable, assign the task to the SPECIFIC USER whose roles and responsibilities best match the work required.
 Provide a clear task_title and a short task_description summarizing what needs to be done.
 Estimate confidence (0.0 to 1.0).
 Determine priority ('low', 'medium', 'high', 'critical').
 
-Available Departments:
-${data.departments.join("\n")}${customInstructionStr}
+Available Users & Their Responsibilities:
+${usersListContext}${customInstructionStr}
 
-Return the structured JSON classification. Note: Ensure department matches exactly from available list or is 'unclassified'.`,
+Return the structured JSON classification. You MUST return 'assigned_user_email' matching the exactly selected user's email, or 'unassigned' if no match.`,
                         },
                         {
                             role: "user",
@@ -55,10 +59,10 @@ Columns: ${data.columns.join(", ")}
 Row Data:
 ${JSON.stringify(data.row, null, 2)}
 
-Available Departments:
-${data.departments.join("\n")}
+Available Users:
+${usersListContext}
 
-Return the structured JSON classification. Note: Ensure department matches exactly from available list or is 'unclassified'.`,
+Return the structured JSON classification. Note: Ensure assigned_user_email matches exactly from available list or is 'unassigned'.`,
                         },
                     ],
                 }),
@@ -74,7 +78,7 @@ Return the structured JSON classification. Note: Ensure department matches exact
         } catch (e: any) {
             console.error("Server AI Error classification:", e.message);
             return {
-                department: "unclassified",
+                assigned_user_email: "unassigned",
                 is_actionable: false,
                 task_title: "AI Analysis Failed",
                 task_description: "Failed to classify via server.",

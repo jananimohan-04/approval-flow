@@ -19,11 +19,16 @@ export const taskService = {
     company_id: string;
   }): Promise<AppTask | null> {
 
-    // Fetch all prompt instructions strictly scoped to this company
     const rules = getDb().ai_rules.filter(r => r.is_active && r.company_id === params.company_id);
     const customPrompts = rules.map(r => r.prompt_instruction);
 
-    const deptNames = getDb().departments.filter(d => d.active).map(d => d.name);
+    const activeUsersObj = getDb().users.filter(u => u.active && u.company_id === params.company_id);
+    const usersPayload = activeUsersObj.map(u => {
+      const payload: { email: string; roles_responsibilities?: string; remarks?: string } = { email: u.email };
+      if (u.roles_responsibilities) payload.roles_responsibilities = u.roles_responsibilities;
+      if (u.remarks) payload.remarks = u.remarks;
+      return payload;
+    });
 
     const aiDecision = await classifyRowFn({
       data: {
@@ -31,17 +36,23 @@ export const taskService = {
         sheet: params.sheet,
         columns: params.columns,
         row: params.row,
-        departments: deptNames,
+        users: usersPayload,
         customPrompts: customPrompts,
       }
     });
 
     if (!aiDecision.is_actionable) return null;
 
+    let assigned_user_id: string | null = null;
     let department_id: string | null = null;
-    const matchDept = getDb().departments.find(d => d.name.toLowerCase() === aiDecision.department.toLowerCase());
-    department_id = matchDept ? matchDept.id : null;
-    if (aiDecision.confidence < 0.70) department_id = null;
+
+    if (aiDecision.confidence >= 0.70 && aiDecision.assigned_user_email && aiDecision.assigned_user_email.toLowerCase() !== "unassigned") {
+      const matchingUser = activeUsersObj.find(u => u.email.toLowerCase() === aiDecision.assigned_user_email.toLowerCase());
+      if (matchingUser) {
+        assigned_user_id = matchingUser.id;
+        department_id = matchingUser.department_id; // inherit department of matched user
+      }
+    }
 
     const priority: TaskPriority = (aiDecision.priority === "critical" ? "urgent" : (aiDecision.priority as TaskPriority));
     const task_title = aiDecision.task_title;
@@ -50,35 +61,6 @@ export const taskService = {
     const ai_classification = true;
     const ai_confidence = aiDecision.confidence;
     const company_id = params.company_id || getDb().users.find(u => u.id === params.created_by)?.company_id || "demo";
-
-    // Auto-assignment behavior mapping
-    let assigned_user_id: string | null = null;
-    if (department_id) {
-      const activeUsers = getDb().users.filter(u => u.active && u.department_id === department_id && u.company_id === company_id);
-      if (activeUsers.length === 1) {
-        assigned_user_id = activeUsers[0]!.id;
-      } else if (activeUsers.length > 1) {
-        // Assign to least loaded stringently
-        const deptTasks = getDb().tasks.filter(t => t.department_id === department_id && (t.status === "in_progress" || t.status === "pending"));
-        const loadMap = new Map<string, number>();
-        activeUsers.forEach(u => loadMap.set(u.id, 0));
-        deptTasks.forEach(t => {
-          if (t.assigned_user_id && loadMap.has(t.assigned_user_id)) {
-            loadMap.set(t.assigned_user_id, loadMap.get(t.assigned_user_id)! + 1);
-          }
-        });
-
-        let minUser = activeUsers[0]!.id;
-        let minLoad = loadMap.get(minUser)!;
-        for (const [uid, load] of loadMap.entries()) {
-          if (load < minLoad) {
-            minLoad = load;
-            minUser = uid;
-          }
-        }
-        assigned_user_id = minUser;
-      }
-    }
 
     const newTask: AppTask = {
       id: taskId,
@@ -143,29 +125,39 @@ export const taskService = {
   },
 
   async classifyEmailContent(emailContent: string, createdBy: string, company_id: string): Promise<AppTask | null> {
+    const activeUsersObj = getDb().users.filter(u => u.active && u.company_id === company_id);
+    const usersPayload = activeUsersObj.map(u => {
+      const payload: { email: string; roles_responsibilities?: string; remarks?: string } = { email: u.email };
+      if (u.roles_responsibilities) payload.roles_responsibilities = u.roles_responsibilities;
+      if (u.remarks) payload.remarks = u.remarks;
+      return payload;
+    });
+
     const aiDecision = await classifyRowFn({
       data: {
         source: "Email Inbox",
         sheet: "Inbound",
         columns: ["Body"],
         row: { Body: emailContent },
-        departments: getDb().departments.filter(d => d.active).map(d => d.name),
+        users: usersPayload,
         customPrompts: []
       }
     });
 
     if (!aiDecision.is_actionable) return null;
 
-    const matchDept = getDb().departments.find(d => d.name.toLowerCase() === aiDecision.department.toLowerCase());
-    let department_id = matchDept ? matchDept.id : null;
-    if (aiDecision.confidence < 0.70) department_id = null;
+    let assigned_user_id: string | null = null;
+    let department_id: string | null = null;
+
+    if (aiDecision.confidence >= 0.70 && aiDecision.assigned_user_email && aiDecision.assigned_user_email.toLowerCase() !== "unassigned") {
+      const matchingUser = activeUsersObj.find(u => u.email.toLowerCase() === aiDecision.assigned_user_email.toLowerCase());
+      if (matchingUser) {
+        assigned_user_id = matchingUser.id;
+        department_id = matchingUser.department_id;
+      }
+    }
 
     const taskId = uid("tsk");
-    let assigned_user_id: string | null = null;
-    if (department_id) {
-      const activeUsers = getDb().users.filter(u => u.active && u.department_id === department_id && u.company_id === company_id);
-      if (activeUsers.length === 1) assigned_user_id = activeUsers[0]!.id;
-    }
 
     const newTask: AppTask = {
       id: taskId,
