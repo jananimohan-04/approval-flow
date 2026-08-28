@@ -285,8 +285,23 @@ export const googleDriveService = {
         dataSourceService.update("data_sources", file.id, { last_synced_at: now, updated_at: now });
 
         const dlRes = await downloadGoogleFileFn({
-          data: { userId: user.id, fileId: file.google_file_id, mimeType: file.mime_type || "", accessToken: connection.encrypted_access_token || "" },
+          data: {
+            userId: user.id,
+            fileId: file.google_file_id,
+            mimeType: file.mime_type || "",
+            accessToken: connection.encrypted_access_token || "",
+            refreshToken: connection.encrypted_refresh_token || undefined,
+            connectionId: connection.id
+          },
         });
+
+        if (dlRes.newAccessToken) {
+          // Update local state and database with new token
+          connection.encrypted_access_token = dlRes.newAccessToken;
+          await dataSourceService.update("google_drive_connections", connection.id, {
+            encrypted_access_token: dlRes.newAccessToken
+          });
+        }
 
         if (!dlRes.success) {
           errors.push(`Failed to download ${file.file_name}: ${dlRes.error}`);

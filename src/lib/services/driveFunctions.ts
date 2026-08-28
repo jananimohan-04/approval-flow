@@ -213,7 +213,7 @@ export const listGoogleFilesInFolderFn = createServerFn({ method: "POST" })
 
 /** Download a Google Drive file and return it as base64. */
 export const downloadGoogleFileFn = createServerFn({ method: "POST" })
-    .validator((data: { userId: string; fileId: string; mimeType: string; accessToken: string }) => data)
+    .validator((data: { userId: string; fileId: string; mimeType: string; accessToken: string; refreshToken?: string; connectionId?: string }) => data)
     .handler(
         async ({
             data,
@@ -222,15 +222,45 @@ export const downloadGoogleFileFn = createServerFn({ method: "POST" })
             error?: string;
             base64Data?: string;
             modifiedTime?: string;
+            newAccessToken?: string;
         }> => {
-            const token = data.accessToken;
+            let token = data.accessToken;
             if (!token) return { success: false, error: "No valid server token" };
 
             try {
-                const metaRes = await driveGet(
+                let metaRes = await driveGet(
                     token,
                     `https://www.googleapis.com/drive/v3/files/${data.fileId}?fields=id,name,modifiedTime,mimeType`,
                 );
+
+                let newAccessToken: string | undefined = undefined;
+
+                // If unauthorized and we have a refresh token, try to refresh
+                if (metaRes.status === 401 && data.refreshToken) {
+                    const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: new URLSearchParams({
+                            client_id: getClientId(),
+                            client_secret: getClientSecret(),
+                            refresh_token: data.refreshToken,
+                            grant_type: "refresh_token",
+                        }),
+                    });
+
+                    if (refreshRes.ok) {
+                        const refreshData = (await refreshRes.json()) as { access_token: string; expires_in: number };
+                        token = refreshData.access_token;
+                        newAccessToken = token;
+
+                        // Retry metadata fetch with new token
+                        metaRes = await driveGet(
+                            token,
+                            `https://www.googleapis.com/drive/v3/files/${data.fileId}?fields=id,name,modifiedTime,mimeType`,
+                        );
+                    }
+                }
+
                 if (!metaRes.ok) return { success: false, error: "Metadata fetch failed" };
                 const meta = (await metaRes.json()) as { modifiedTime: string };
 
@@ -245,7 +275,7 @@ export const downloadGoogleFileFn = createServerFn({ method: "POST" })
                 const buffer = await dlRes.arrayBuffer();
                 const base64Data = Buffer.from(buffer).toString("base64");
 
-                return { success: true, base64Data, modifiedTime: meta.modifiedTime };
+                return { success: true, base64Data, modifiedTime: meta.modifiedTime, newAccessToken };
             } catch (e) {
                 return { success: false, error: (e as Error).message };
             }
