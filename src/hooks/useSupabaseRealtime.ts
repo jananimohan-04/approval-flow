@@ -3,12 +3,18 @@ import { supabase } from "@/lib/supabase";
 import { dataSourceService } from "@/lib/data/dataSource";
 import { useSession } from "@/hooks/useSession";
 import { notificationService } from "@/lib/services/notificationService";
+import { googleDriveService } from "@/lib/services/googleDriveService";
 
 export function useSupabaseRealtime() {
     const user = useSession();
 
     useEffect(() => {
         if (!user) return;
+
+        // Automatic background polling interval for Drive Sync
+        const syncInterval = setInterval(() => {
+            googleDriveService.syncAllDataSources(user.id).catch(console.error);
+        }, 30000); // 30 seconds
 
         // We only subscribe to notifications for this specific user to avoid cross-talk
         const notifChannel = supabase
@@ -82,6 +88,7 @@ export function useSupabaseRealtime() {
             });
 
         return () => {
+            clearInterval(syncInterval);
             supabase.removeChannel(notifChannel);
             supabase.removeChannel(taskChannel);
         };
