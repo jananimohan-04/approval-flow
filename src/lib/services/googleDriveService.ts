@@ -206,7 +206,7 @@ export const googleDriveService = {
           break;
         }
       }
-      if (!rowKey) rowKey = `row-${i}-${simpleHash(Object.keys(row).join(","))}`;
+      if (!rowKey) rowKey = `row-hash-${rowHash}`;
 
       const existingRow = existingRows.find(
         (e) => e.row_key === rowKey && e.sheet_name === sheetName,
@@ -290,12 +290,10 @@ export const googleDriveService = {
 
         if (!dlRes.success) {
           // FALLBACK FOR DEMONSTRATION IF OAUTH TOKEN IS NULL
-          const uniqueId = Math.random().toString(36).substring(7);
           const mockRows = [
             { "Invoice Number": "INV-1001", "Status": "Pending Audit", "Amount": "25000", "Notes": "Requires immediate follow up for Q3." },
             { "Invoice Number": "INV-1002", "Status": "Paid", "Amount": "1200", "Notes": "Routine expense." },
-            { "Invoice Number": "INV-1003", "Status": "Overdue", "Amount": "8900", "Notes": "Client is not responding." },
-            { "Invoice Number": `INV-${uniqueId}`, "Status": "New Upload", "Amount": "9999", "Notes": "This is a dynamically generated row to prove the background poller detects new rows!" }
+            { "Invoice Number": "INV-1003", "Status": "Overdue", "Amount": "8900", "Notes": "Client is not responding." }
           ];
 
           dataSourceService.update("data_sources", file.id, {
