@@ -291,9 +291,16 @@ export const googleDriveService = {
         if (!dlRes.success) {
           // FALLBACK FOR DEMONSTRATION IF OAUTH TOKEN IS NULL
           const mockRows = [
-            { "Invoice Number": "INV-1001", "Status": "Pending Audit", "Amount": "25000", "Notes": "Requires immediate follow up for Q3." },
-            { "Invoice Number": "INV-1002", "Status": "Paid", "Amount": "1200", "Notes": "Routine expense." },
-            { "Invoice Number": "INV-1003", "Status": "Overdue", "Amount": "8900", "Notes": "Client is not responding." }
+            { "Invoice Number": "INV-1001", "Status": "Pending Audit", "Amount": "25000", "Notes": "Q3 Legal compliance audit requires technical verification." },
+            { "Invoice Number": "INV-1002", "Status": "Paid", "Amount": "120", "Notes": "Routine office supplies expense." },
+            { "Invoice Number": "INV-1003", "Status": "Overdue", "Amount": "8900", "Notes": "Vendor is angry. Needs immediate follow-up and collection call." },
+            { "Invoice Number": "INV-1004", "Status": "Pending", "Amount": "6500", "Notes": "High value sign-off required from executive." },
+            { "Invoice Number": "INV-1005", "Status": "Pending", "Amount": "450", "Notes": "AWS Cloud IT Server monthly subscription." },
+            { "Invoice Number": "INV-1006", "Status": "Disputed", "Amount": "1250", "Notes": "Employee traveling reimbursement discrepancy. Check payroll." },
+            { "Invoice Number": "INV-1007", "Status": "Paid", "Amount": "45", "Notes": "Basic logging needed for water delivery to office." },
+            { "Invoice Number": "INV-1008", "Status": "Overdue", "Amount": "12000", "Notes": "Client hasn't responded to emails in 3 weeks. Escalate!" },
+            { "Invoice Number": "INV-1009", "Status": "Pending Audit", "Amount": "50000", "Notes": "Massive Q4 financial audit database cross-check required." },
+            { "Invoice Number": "INV-1010", "Status": "Pending", "Amount": "10000", "Notes": "Executive approval needed for new marketing contractor." }
           ];
 
           dataSourceService.update("data_sources", file.id, {
