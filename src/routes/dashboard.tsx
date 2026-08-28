@@ -15,9 +15,10 @@ function DashboardPage() {
   if (user === undefined) return null;
   if (user === null) return <Navigate to="/" replace />;
 
-  const isAdmin = user.role === "admin";
+  const isAdmin = user.role === "admin" || user.role === "super_admin" || user.role === "company_admin";
 
-  const deptTasks = isAdmin ? db.tasks : db.tasks.filter((t) => t.department_id === user.department_id);
+  const companyTasks = db.tasks.filter((t) => t.company_id === user.company_id);
+  const deptTasks = isAdmin ? companyTasks : companyTasks.filter((t) => t.department_id === user.department_id);
   const pending = deptTasks.filter((t) => t.status === "pending" || t.status === "unassigned");
   const inProgress = deptTasks.filter((t) => t.status === "in_progress");
   const completed = deptTasks.filter((t) => t.status === "completed");
@@ -42,7 +43,7 @@ function DashboardPage() {
               <Database className="size-5 text-emerald-600" />
             </div>
             <div className="mt-4">
-              <p className="text-3xl font-display font-medium">{db.data_sources.length}</p>
+              <p className="text-3xl font-display font-medium">{db.data_sources.filter(d => d.company_id === user.company_id).length}</p>
               <p className="text-sm text-muted-foreground mt-1">Active Excel sheets</p>
             </div>
           </div>
@@ -77,8 +78,8 @@ function DashboardPage() {
               <Users className="size-5 text-primary" />
             </div>
             <div className="mt-4">
-              <p className="text-3xl font-display font-medium">{db.departments.length}</p>
-              <p className="text-sm text-muted-foreground mt-1">{db.users.length} Active Users</p>
+              <p className="text-3xl font-display font-medium">{db.departments.filter(d => d.company_id === user.company_id).length}</p>
+              <p className="text-sm text-muted-foreground mt-1">{db.users.filter(u => u.company_id === user.company_id).length} Active Users</p>
             </div>
           </div>
         )}
