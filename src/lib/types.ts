@@ -1,5 +1,5 @@
 /**
- * Domain model for Nexus AI Operations Assistant.
+ * Domain model for Argus CEU Operations Assistant.
  * Fully aligned with Supabase PostgreSQL schema.
  */
 

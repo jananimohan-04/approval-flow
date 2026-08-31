@@ -109,7 +109,7 @@ function AiAssistantPage() {
               How can I help you today?
             </h2>
             <p className="text-muted-foreground max-w-sm mb-8">
-              Nexus AI is connected to your data sources. Ask anything about your operational data
+              Argus CEU is connected to your data sources. Ask anything about your operational data
               and get instant answers with citations.
             </p>
 
@@ -153,13 +153,12 @@ function AiAssistantPage() {
                   <div
                     className={`
                                         p-3 px-4 rounded-2xl shadow-sm text-sm
-                                        ${
-                                          msg.role === "user"
-                                            ? "bg-primary text-primary-foreground rounded-tr-sm"
-                                            : msg.isError
-                                              ? "bg-destructive/10 text-destructive rounded-tl-sm"
-                                              : "bg-card border rounded-tl-sm"
-                                        }
+                                        ${msg.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-tr-sm"
+                        : msg.isError
+                          ? "bg-destructive/10 text-destructive rounded-tl-sm"
+                          : "bg-card border rounded-tl-sm"
+                      }
                                     `}
                   >
                     {msg.isError && <AlertCircle className="inline size-4 mr-2 -mt-0.5" />}
@@ -204,7 +203,7 @@ function AiAssistantPage() {
             className="relative max-w-4xl mx-auto flex gap-2"
           >
             <Input
-              placeholder="Message Nexus AI..."
+              placeholder="Message Argus CEU..."
               className="pr-12 h-12 shadow-sm rounded-full bg-background"
               value={input}
               onChange={(e) => setInput(e.target.value)}

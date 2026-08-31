@@ -25,7 +25,7 @@ import { notificationService, type UserSettings } from "@/lib/services/notificat
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({
-    meta: [{ title: "Notifications — Nexus AI" }],
+    meta: [{ title: "Notifications — Argus CEU" }],
   }),
   component: NotificationsPage,
 });
