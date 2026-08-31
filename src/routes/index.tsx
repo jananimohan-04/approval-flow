@@ -21,8 +21,8 @@ function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
 
   // Dev Fallback state
-  const [email, setEmail] = useState("admin@demo.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [gstNumber, setGstNumber] = useState("");
 
