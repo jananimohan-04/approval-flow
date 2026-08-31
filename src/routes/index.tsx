@@ -84,16 +84,8 @@ function LoginPage() {
           </h2>
           <ul className="space-y-3 text-sm text-zinc-400">
             <li className="flex items-start gap-3">
-              <Database className="mt-0.5 size-4 text-emerald-400 shrink-0" />
-              Automatically monitor Google Drive spreadsheets for new information.
-            </li>
-            <li className="flex items-start gap-3">
               <Network className="mt-0.5 size-4 text-emerald-400 shrink-0" />
-              Let AI instantly route new tasks and data to the right departments.
-            </li>
-            <li className="flex items-start gap-3">
-              <ShieldCheck className="mt-0.5 size-4 text-emerald-400 shrink-0" />
-              Keep all company data private, secure, and perfectly organized.
+              AI will assign tasks to your teams.
             </li>
           </ul>
         </div>
