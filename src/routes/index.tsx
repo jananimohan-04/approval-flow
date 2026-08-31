@@ -117,7 +117,6 @@ function LoginPage() {
 
       <section className="flex items-center justify-center p-6 bg-background">
         <div className="w-full max-w-sm text-center">
-          <h1 className="font-display text-2xl font-bold tracking-tight">Sign in</h1>
 
           <div className="mt-8">
             <h1 className="font-display text-2xl font-bold tracking-tight text-center mb-6">
