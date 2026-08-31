@@ -112,7 +112,7 @@ function AiRulesPage() {
                         <div className="text-sm">
                             <h3 className="font-semibold text-primary mb-1">Custom System Instructions</h3>
                             <p className="text-muted-foreground">
-                                These instructions will be injected directly into the LLM context when Argus CEU evaluates rows for this company. You can define priorities, custom mapping logic, or explicitly ignore junk data.
+                                These instructions will be injected directly into the LLM context when Argus CEO evaluates rows for this company. You can define priorities, custom mapping logic, or explicitly ignore junk data.
                             </p>
                         </div>
                     </div>

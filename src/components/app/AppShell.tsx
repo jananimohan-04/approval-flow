@@ -25,7 +25,7 @@ const NAV: NavItem[] = [
   // Super Admin Only
   { to: "/companies", label: "Companies", icon: Database, roles: ["super_admin"] },
 
-  // Data Connectivity (Moved to top near Argus CEU Operations logo)
+  // Data Connectivity (Moved to top near Argus CEO Operations logo)
   { to: "/data-sources", label: "Connect to Drive", icon: Database, roles: ["super_admin", "company_admin", "admin"] },
 
   // Dashboard & Common
@@ -106,7 +106,7 @@ export function AppShell({
               <Bot className="size-5" />
             </div>
             <div>
-              <p className="font-display text-base font-bold tracking-tight">Argus CEU</p>
+              <p className="font-display text-base font-bold tracking-tight">Argus CEO</p>
               <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Operations</p>
             </div>
           </div>
@@ -141,7 +141,7 @@ export function AppShell({
             </SheetTrigger>
             <SheetContent side="left" className="w-64 bg-sidebar p-0">
               <SheetTitle className="border-b px-4 py-4 font-display text-base flex items-center gap-2">
-                <Bot className="size-5" /> Argus CEU
+                <Bot className="size-5" /> Argus CEO
               </SheetTitle>
               <NavList role={user.role} />
               <div className="mt-auto border-t p-3">

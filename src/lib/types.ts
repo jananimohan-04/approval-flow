@@ -1,5 +1,5 @@
 /**
- * Domain model for Argus CEU Operations Assistant.
+ * Domain model for Argus CEO Operations Assistant.
  * Fully aligned with Supabase PostgreSQL schema.
  */
 

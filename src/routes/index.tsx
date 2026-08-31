@@ -97,7 +97,7 @@ function LoginPage() {
     <div className="grid min-h-[100dvh] w-full lg:grid-cols-2">
       <section className="hidden flex-col justify-between bg-zinc-950 p-10 text-white lg:flex">
         <div className="flex items-center gap-2 font-display text-xl tracking-tight">
-          ARGUS CEU
+          ARGUS CEO
         </div>
         <div className="space-y-6">
           <h2 className="max-w-sm font-display text-4xl font-bold leading-[1.05] tracking-tight">
@@ -111,7 +111,7 @@ function LoginPage() {
           </ul>
         </div>
         <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
-          Argus CEU Platform
+          Argus CEO Platform
         </p>
       </section>
 

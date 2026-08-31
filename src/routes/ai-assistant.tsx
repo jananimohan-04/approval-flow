@@ -109,7 +109,7 @@ function AiAssistantPage() {
               How can I help you today?
             </h2>
             <p className="text-muted-foreground max-w-sm mb-8">
-              Argus CEU is connected to your data sources. Ask anything about your operational data
+              Argus CEO is connected to your data sources. Ask anything about your operational data
               and get instant answers with citations.
             </p>
 
@@ -203,7 +203,7 @@ function AiAssistantPage() {
             className="relative max-w-4xl mx-auto flex gap-2"
           >
             <Input
-              placeholder="Message Argus CEU..."
+              placeholder="Message Argus CEO..."
               className="pr-12 h-12 shadow-sm rounded-full bg-background"
               value={input}
               onChange={(e) => setInput(e.target.value)}

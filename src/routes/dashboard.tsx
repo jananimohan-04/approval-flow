@@ -128,7 +128,7 @@ function DashboardPage() {
           <div className="border bg-card rounded-xl shadow-sm overflow-hidden h-fit">
             <div className="border-b px-6 py-4 bg-muted/20">
               <h3 className="font-semibold flex items-center gap-2">
-                <Bot className="size-4" /> Argus CEU Summary
+                <Bot className="size-4" /> Argus CEO Summary
               </h3>
             </div>
             <div className="p-6 space-y-4">
@@ -159,7 +159,7 @@ function DashboardPage() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground pt-2">
-                Argus CEU continuously monitors connected Google Drive sheets and routes detected data items to specific departments based on defined keywords and fallback inference.
+                Argus CEO continuously monitors connected Google Drive sheets and routes detected data items to specific departments based on defined keywords and fallback inference.
               </p>
             </div>
           </div>
