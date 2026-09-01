@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { dataSourceService } from "@/lib/data/dataSource";
 import { createDatabaseAuthUserFn } from "@/lib/services/driveFunctions";
+import { GSTVerification } from "@/components/app/GSTVerification";
 
 export const Route = createFileRoute("/companies")({
   component: CompaniesPage,
@@ -27,6 +28,7 @@ function CompaniesPage() {
   const db = useDatabase();
 
   const [open, setOpen] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
@@ -78,49 +80,64 @@ function CompaniesPage() {
       title="Multi-Tenant Configuration"
       subtitle="Manage client companies and organization siloes (Super Admin Only)"
       actions={
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 size-4" /> Register New Company
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Register Tenant</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreateCompany} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Company Name</Label>
-                <Input
-                  required
-                  placeholder="Acme Corp"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Company Code (Unique Identifier)</Label>
-                <Input
-                  required
-                  placeholder="ACME"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description (Optional)</Label>
-                <Input
-                  placeholder="Brief details about tenant..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Registering..." : "Register Company"}
+        <div className="flex gap-2">
+          <Dialog open={verifyOpen} onOpenChange={setVerifyOpen}>
+            <DialogTrigger asChild>
+              <Button variant="secondary">
+                <Search className="mr-2 size-4" /> Verify GST
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Verify GST Number</DialogTitle>
+              </DialogHeader>
+              <GSTVerification onVerified={() => setVerifyOpen(false)} />
+            </DialogContent>
+          </Dialog>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 size-4" /> Register New Company
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Register Tenant</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateCompany} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Company Name</Label>
+                  <Input
+                    required
+                    placeholder="Acme Corp"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Company Code (Unique Identifier)</Label>
+                  <Input
+                    required
+                    placeholder="ACME"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description (Optional)</Label>
+                  <Input
+                    placeholder="Brief details about tenant..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? "Registering..." : "Register Company"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       }
     >
       <div className="flex items-center gap-2 mb-6 max-w-sm">

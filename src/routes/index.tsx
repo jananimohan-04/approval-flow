@@ -8,6 +8,7 @@ import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { signUpCompanyFn } from "@/lib/services/signUpService";
+import { verifyGstFn } from "@/lib/services/gstService";
 
 export const Route = createFileRoute("/")({
   component: LoginPage,
@@ -25,6 +26,8 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [gstNumber, setGstNumber] = useState("");
+  const [gstDetails, setGstDetails] = useState<any>(null);
+  const [isVerifyingGst, setIsVerifyingGst] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -65,11 +68,61 @@ function LoginPage() {
     }
   }
 
-  async function handleSignUp(e: React.FormEvent) {
+  async function handleVerifyGst(e: React.FormEvent) {
     e.preventDefault();
+    if (!companyName.trim()) {
+      toast.error("Company Name is required.");
+      return;
+    }
+    if (!gstNumber || gstNumber.length !== 15) {
+      toast.error("GST number must be exactly 15 characters.");
+      return;
+    }
+    if (!email.trim()) {
+      toast.error("Email is required.");
+      return;
+    }
+    if (!password) {
+      toast.error("Password is required.");
+      return;
+    }
+
+    setIsVerifyingGst(true);
+    try {
+      // Check for duplicates first
+      const { data: existing, error: dbError } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('code', gstNumber)
+        .maybeSingle();
+
+      if (dbError) throw dbError;
+      if (existing) {
+        toast.error('This GST number is already registered.');
+        setIsVerifyingGst(false);
+        return;
+      }
+
+      const data = await verifyGstFn({ data: { gstNumber } });
+
+      if (data && data.success) {
+        setGstDetails(data.data);
+        toast.success('GST details verified successfully.');
+      } else {
+        toast.error(data?.error || 'Failed to verify GST number.');
+      }
+    } catch (error: any) {
+      console.error('GST Verification error:', error);
+      toast.error(error.message || 'An unexpected error occurred.');
+    } finally {
+      setIsVerifyingGst(false);
+    }
+  }
+
+  async function handleSignUpFinal() {
     setIsSubmitting(true);
     try {
-      await signUpCompanyFn({ data: { companyName, gstNumber, email, password } });
+      await signUpCompanyFn({ data: { companyName, gstNumber, email, password, gstDetails } });
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -176,55 +229,79 @@ function LoginPage() {
               Use Developer Password Bypass
             </Button>
           ) : (
-            <form onSubmit={isSignUp ? handleSignUp : handleEmailLogin} className="mt-4 space-y-4 text-left">
-              {isSignUp && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="companyName">Company Name</Label>
-                    <Input
-                      id="companyName"
-                      type="text"
-                      value={companyName}
-                      onChange={e => setCompanyName(e.target.value)}
-                      required
-                    />
+            isSignUp && gstDetails ? (
+              <div className="mt-4 space-y-4 text-left">
+                <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 text-sm space-y-2">
+                  <h3 className="font-semibold text-lg mb-2">Confirm Company Details</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="font-semibold">Legal Name:</div>
+                    <div>{gstDetails.organization_name}</div>
+
+                    <div className="font-semibold">Trade Name:</div>
+                    <div>{gstDetails.trade_name || 'N/A'}</div>
+
+                    <div className="font-semibold">Status:</div>
+                    <div>{gstDetails.gstin_status}</div>
+
+                    <div className="font-semibold">Taxpayer Type:</div>
+                    <div>{gstDetails.taxpayer_type}</div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gstNumber">GST Number</Label>
-                    <Input
-                      id="gstNumber"
-                      type="text"
-                      value={gstNumber}
-                      onChange={e => setGstNumber(e.target.value)}
-                      required
-                    />
-                  </div>
-                </>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                />
+                </div>
+                <Button onClick={handleSignUpFinal} className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? "Creating account..." : "Confirm & Create Account"}
+                </Button>
+                <Button variant="outline" onClick={() => setGstDetails(null)} className="w-full" disabled={isSubmitting}>
+                  Back
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? (isSignUp ? "Creating account..." : "Signing in...") : (isSignUp ? "Sign Up" : "Sign in securely")}
-              </Button>
-            </form>
+            ) : (
+              <form onSubmit={isSignUp ? handleVerifyGst : handleEmailLogin} className="mt-4 space-y-4 text-left">
+                {isSignUp && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="companyName">Company Name</Label>
+                      <Input
+                        id="companyName"
+                        type="text"
+                        value={companyName}
+                        onChange={e => setCompanyName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="gstNumber">GST Number</Label>
+                      <Input
+                        id="gstNumber"
+                        type="text"
+                        value={gstNumber}
+                        onChange={e => setGstNumber(e.target.value.toUpperCase())}
+                        maxLength={15}
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isSubmitting || isVerifyingGst}>
+                  {isSignUp ? (isVerifyingGst ? "Verifying GST..." : "Verify & Sign Up") : (isSubmitting ? "Signing in..." : "Sign in securely")}
+                </Button>
+              </form>
+            )
           )}
 
           <div className="mt-6 text-center">
