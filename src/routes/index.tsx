@@ -2,13 +2,10 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Database, Network, ShieldCheck, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { signUpCompanyFn } from "@/lib/services/signUpService";
-import { verifyGstFn } from "@/lib/services/gstService";
+import { AnimatedNetworkBg } from "@/components/app/AnimatedNetworkBg";
 
 export const Route = createFileRoute("/")({
   component: LoginPage,
@@ -18,16 +15,6 @@ function LoginPage() {
   const user = useSession();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showEmailLogin, setShowEmailLogin] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-
-  // Dev Fallback state
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [gstNumber, setGstNumber] = useState("");
-  const [gstDetails, setGstDetails] = useState<any>(null);
-  const [isVerifyingGst, setIsVerifyingGst] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -51,90 +38,6 @@ function LoginPage() {
     }
   }
 
-  async function handleEmailLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      if (error) throw error;
-      toast.success("Login successful!");
-      // The useSession hook will catch this and route automatically
-    } catch (e: any) {
-      toast.error(e.message || "Invalid credentials");
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleVerifyGst(e: React.FormEvent) {
-    e.preventDefault();
-    if (!companyName.trim()) {
-      toast.error("Company Name is required.");
-      return;
-    }
-    if (!gstNumber || gstNumber.length !== 15) {
-      toast.error("GST number must be exactly 15 characters.");
-      return;
-    }
-    if (!email.trim()) {
-      toast.error("Email is required.");
-      return;
-    }
-    if (!password) {
-      toast.error("Password is required.");
-      return;
-    }
-
-    setIsVerifyingGst(true);
-    try {
-      // Check for duplicates first
-      const { data: existing, error: dbError } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('code', gstNumber)
-        .maybeSingle();
-
-      if (dbError) throw dbError;
-      if (existing) {
-        toast.error('This GST number is already registered.');
-        setIsVerifyingGst(false);
-        return;
-      }
-
-      const data = await verifyGstFn({ data: { gstNumber } });
-
-      if (data && data.success) {
-        setGstDetails(data.data);
-        toast.success('GST details verified successfully.');
-      } else {
-        toast.error(data?.error || 'Failed to verify GST number.');
-      }
-    } catch (error: any) {
-      console.error('GST Verification error:', error);
-      toast.error(error.message || 'An unexpected error occurred.');
-    } finally {
-      setIsVerifyingGst(false);
-    }
-  }
-
-  async function handleSignUpFinal() {
-    setIsSubmitting(true);
-    try {
-      await signUpCompanyFn({ data: { companyName, gstNumber, email, password, gstDetails } });
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      if (error) throw error;
-      toast.success("Account created successfully!");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to sign up");
-      setIsSubmitting(false);
-    }
-  }
-
   if (user === undefined) {
     return (
       <div className="flex min-h-[100dvh] w-full items-center justify-center bg-zinc-950">
@@ -147,181 +50,79 @@ function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-[100dvh] w-full lg:grid-cols-2">
-      <section className="hidden flex-col justify-between bg-zinc-950 p-10 text-white lg:flex">
-        <div className="flex items-center gap-2 font-display text-xl tracking-tight">
-          ARGUS CEO
-        </div>
-        <div className="space-y-6">
-          <h2 className="max-w-sm font-display text-4xl font-bold leading-[1.05] tracking-tight">
-            Automate your daily workflows.
-          </h2>
-          <ul className="space-y-3 text-sm text-zinc-400">
-            <li className="flex items-start gap-3">
-              <Network className="mt-0.5 size-4 text-emerald-400 shrink-0" />
-              AI will assign tasks to your teams.
-            </li>
-          </ul>
-        </div>
-        <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
-          Argus CEO Platform
-        </p>
-      </section>
+    <div className="relative min-h-[100dvh] w-full flex flex-col overflow-hidden bg-zinc-950 text-white font-sans">
+      <AnimatedNetworkBg />
 
-      <section className="flex items-center justify-center p-6 bg-background">
-        <div className="w-full max-w-sm text-center">
+      <div className="relative z-10 flex flex-1 w-full flex-col lg:flex-row">
+        {/* Left Section: Hero Content */}
+        <section className="flex flex-1 flex-col justify-center p-8 lg:p-16 xl:p-24">
+          <div className="mb-12 flex items-center gap-3 font-display text-2xl tracking-tight">
+            <img src="/logo.jpg" alt="Argus CEO Logo" className="size-10 object-contain rounded-md" />
+            <span className="font-bold">ARGUS CEO</span>
+          </div>
 
-          <div className="mt-8">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-center mb-6">
-              {isSignUp ? "Create an Account" : "Sign in"}
+          <div className="max-w-2xl space-y-6">
+            <h1 className="font-display text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
+              Let AI Manage Your Entire Business.<br />
+              <span className="text-[#E31837]">Automatically.</span>
             </h1>
-            {!isSignUp && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full relative py-6"
-                disabled={isSubmitting}
-                onClick={handleGoogleLogin}
-              >
-                <svg className="absolute left-4 size-5" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                  <path d="M1 1h22v22H1z" fill="none" />
-                </svg>
-                {isSubmitting && !showEmailLogin ? "Connecting..." : "Continue with Google"}
+            <p className="text-lg text-zinc-400 sm:text-xl max-w-xl leading-relaxed">
+              Our AI intelligently assigns tasks, schedules work, tracks progress, and ensures your team stays on top of every task.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-4 pt-4">
+              <Button size="lg" className="bg-[#E31837] text-white hover:bg-[#E31837]/90 rounded-full px-8 text-base h-12 border-0">
+                Get Started
               </Button>
-            )}
-          </div>
-
-          {!isSignUp && (
-            <div className="relative mt-8">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with email
-                </span>
-              </div>
+              <Button size="lg" variant="outline" className="rounded-full px-8 text-base h-12 border-zinc-700 bg-zinc-900/50 hover:bg-zinc-800 text-white backdrop-blur-sm">
+                See How It Works
+              </Button>
             </div>
-          )}
-
-          {!showEmailLogin && !isSignUp ? (
-            <Button
-              variant="ghost"
-              className="w-full mt-4 text-xs text-muted-foreground"
-              onClick={() => setShowEmailLogin(true)}
-            >
-              Use Developer Password Bypass
-            </Button>
-          ) : (
-            isSignUp && gstDetails ? (
-              <div className="mt-4 space-y-4 text-left">
-                <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 text-sm space-y-2">
-                  <h3 className="font-semibold text-lg mb-2">Confirm Company Details</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="font-semibold">Legal Name:</div>
-                    <div>{gstDetails.organization_name}</div>
-
-                    <div className="font-semibold">Trade Name:</div>
-                    <div>{gstDetails.trade_name || 'N/A'}</div>
-
-                    <div className="font-semibold">Status:</div>
-                    <div>{gstDetails.gstin_status}</div>
-
-                    <div className="font-semibold">Taxpayer Type:</div>
-                    <div>{gstDetails.taxpayer_type}</div>
-                  </div>
-                </div>
-                <Button onClick={handleSignUpFinal} className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating account..." : "Confirm & Create Account"}
-                </Button>
-                <Button variant="outline" onClick={() => setGstDetails(null)} className="w-full" disabled={isSubmitting}>
-                  Back
-                </Button>
-              </div>
-            ) : (
-              <form onSubmit={isSignUp ? handleVerifyGst : handleEmailLogin} className="mt-4 space-y-4 text-left">
-                {isSignUp && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName">Company Name</Label>
-                      <Input
-                        id="companyName"
-                        type="text"
-                        value={companyName}
-                        onChange={e => setCompanyName(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="gstNumber">GST Number</Label>
-                      <Input
-                        id="gstNumber"
-                        type="text"
-                        value={gstNumber}
-                        onChange={e => setGstNumber(e.target.value.toUpperCase())}
-                        maxLength={15}
-                      />
-                    </div>
-                  </>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting || isVerifyingGst}>
-                  {isSignUp ? (isVerifyingGst ? "Verifying GST..." : "Verify & Sign Up") : (isSubmitting ? "Signing in..." : "Sign in securely")}
-                </Button>
-              </form>
-            )
-          )}
-
-          <div className="mt-6 text-center">
-            <Button
-              variant="link"
-              className="text-xs text-muted-foreground"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setShowEmailLogin(true);
-              }}
-            >
-              {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
-            </Button>
           </div>
+        </section>
 
-          <p className="mt-6 text-xs text-muted-foreground/60 max-w-[16rem] mx-auto">
-            (Google OAuth requires manual cloud console setup to activate fully.)
-          </p>
+        {/* Right Section: Login/Signup Form */}
+        <section className="flex w-full items-center justify-center p-6 lg:w-[500px] xl:w-[600px]">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-8 backdrop-blur-xl shadow-2xl">
+            <h2 className="font-display text-2xl font-bold tracking-tight text-center mb-6 text-white">
+              Sign in to Workspace
+            </h2>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full relative py-6 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white"
+              disabled={isSubmitting}
+              onClick={handleGoogleLogin}
+            >
+              <svg className="absolute left-4 size-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                <path d="M1 1h22v22H1z" fill="none" />
+              </svg>
+              {isSubmitting ? "Connecting..." : "Continue with Google"}
+            </Button>
+
+            <p className="mt-6 text-xs text-zinc-500 max-w-[16rem] mx-auto text-center">
+              (Google OAuth requires manual cloud console setup to activate fully.)
+            </p>
+          </div>
+        </section>
+      </div>
+
+      {/* Footer */}
+      <footer className="relative z-10 w-full border-t border-white/10 bg-black/40 backdrop-blur-xl py-4 px-6 sm:px-12 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-400">
+        <div className="flex items-center gap-3">
+          <img src="/logo.jpg" alt="Argus Purchase Suite Logo" className="size-6 object-contain rounded-sm" />
+          <span className="font-semibold text-white">Argus Purchase Suite</span>
         </div>
-      </section>
+        <div>
+          © 2026 arguscnc.com All Rights Reserved.
+        </div>
+      </footer>
     </div>
   );
 }
+

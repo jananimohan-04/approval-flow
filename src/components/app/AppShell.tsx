@@ -102,8 +102,8 @@ export function AppShell({
       <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar md:flex">
         <div className="border-b px-4 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <Bot className="size-5" />
+            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm overflow-hidden">
+              <img src="/logo.jpg" alt="Argus CEO Logo" className="size-full object-cover" />
             </div>
             <div>
               <p className="font-display text-base font-bold tracking-tight">Argus CEO</p>
@@ -141,7 +141,7 @@ export function AppShell({
             </SheetTrigger>
             <SheetContent side="left" className="w-64 bg-sidebar p-0">
               <SheetTitle className="border-b px-4 py-4 font-display text-base flex items-center gap-2">
-                <Bot className="size-5" /> Argus CEO
+                <img src="/logo.jpg" alt="Argus CEO Logo" className="size-6 object-contain" /> Argus CEO
               </SheetTitle>
               <NavList role={user.role} />
               <div className="mt-auto border-t p-3">
